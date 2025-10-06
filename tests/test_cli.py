@@ -24,7 +24,7 @@ def test_cli_outputs_summary(tmp_path):
         ]
     )
     excel_path = tmp_path / "cli.xlsx"
-frame.to_excel(excel_path, index=False)
+    frame.to_excel(excel_path, index=False)
 
     runner = CliRunner()
     result = runner.invoke(main, ["report", str(excel_path)])
@@ -42,7 +42,8 @@ def test_welcome_screen_is_printed():
     assert result.exit_code == 0
     assert "TruMetraPla Suite" in result.output
     assert "Genera l'eseguibile standalone TruMetraPla.exe" in result.output
-    assert "Script PowerShell e guida all'installer grafico" in result.output
+    assert "Crea l'installer automatico TruMetraPla_Setup.exe" in result.output
+    assert "Script PowerShell e guida avanzata" in result.output
 
 
 def test_build_exe_command(monkeypatch, tmp_path):
@@ -60,3 +61,23 @@ def test_build_exe_command(monkeypatch, tmp_path):
 
     assert result.exit_code == 0
     assert f"Eseguibile generato in: {expected_path}" in result.output
+
+
+def test_build_installer_command(monkeypatch, tmp_path):
+    expected_path = tmp_path / "TruMetraPla_Setup_0.1.0.exe"
+
+    def fake_builder(dist_path, version, reuse_executable):
+        assert dist_path == tmp_path
+        assert version == "0.1.0"
+        assert reuse_executable is True
+        return expected_path
+
+    runner = CliRunner()
+    monkeypatch.setattr(
+        "trumetrapla.cli.build_windows_installer", fake_builder
+    )
+
+    result = runner.invoke(main, ["build-installer", "--dist", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert f"Installer generato in: {expected_path}" in result.output

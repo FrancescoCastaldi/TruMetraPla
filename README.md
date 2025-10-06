@@ -7,7 +7,8 @@ TruMetraPla monitora la produttività nei processi metalmeccanici importando dat
 - Import automatico di file Excel con riconoscimento delle intestazioni italiane e inglesi.
 - Calcolo dei principali indicatori: pezzi prodotti, ore lavorate, produttività media.
 - Aggregazioni per dipendente, processo e giorno con ordinamento per produttività.
-- Interfaccia di benvenuto interattiva con guida alla creazione dell'eseguibile Windows.
+- Consolle grafica moderna con menu a tendina, filtri e tabella interattiva per analizzare i file Excel.
+- Eseguibile Windows che apre una dashboard desktop con caricamento file guidato e riepiloghi KPI.
 
 ## Installazione
 
@@ -32,7 +33,9 @@ Tutti i requisiti vengono gestiti automaticamente dallo script PowerShell, che v
 
 ## Interfaccia di benvenuto
 
-Dopo l'installazione è disponibile il comando `trumetrapla`. Se avviato senza argomenti mostra l'interfaccia di benvenuto che permette di:
+### Avvio da riga di comando
+
+Dopo l'installazione è disponibile il comando `trumetrapla`. Se avviato senza argomenti mostra l'interfaccia di benvenuto testuale che permette di:
 
 1. Generare un report guidato a partire da un file Excel.
 2. Visualizzare le istruzioni per creare l'eseguibile e l'installer Windows.
@@ -42,6 +45,18 @@ Per limitarsi alla sola stampa del menu senza interazione puoi usare:
 ```bash
 trumetrapla --no-interactive
 ```
+
+### Avvio dall'eseguibile Windows
+
+Il file `TruMetraPla.exe` generato con PyInstaller (o installato tramite l'installer automatico) apre una dashboard desktop pensata per l'analisi rapida dei dati.
+La schermata principale offre:
+
+- **Menu File** con la voce *Apri file Excel…* per selezionare il file da importare.
+- **Filtri a tendina** per isolare rapidamente un singolo dipendente o processo produttivo.
+- **Tabella interattiva** con le colonne normalizzate (data, dipendente, processo, pezzi, durata e produttività oraria).
+- **Pulsante "Mostra KPI"** per visualizzare un riepilogo dei principali indicatori e delle top performance.
+
+Al caricamento viene aggiornato lo stato nella barra inferiore, insieme al riepilogo dei totali (pezzi, ore, throughput e numero di dipendenti/processi). In assenza del runtime grafico Windows, l'applicazione ripiega automaticamente sulla CLI.
 
 ## Interfaccia a riga di comando (modalità diretta)
 
@@ -66,13 +81,32 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 ## Costruire l'eseguibile Windows
 
 1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`.
-2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo oppure affidandoti allo script PowerShell. Verrà creato `TruMetraPla.exe` nella cartella `dist/`.
-3. (Opzionale) Crea un installer grafico con [NSIS](https://nsis.sourceforge.io/). Apri `installer/TruMetraPla-Installer.nsi`, aggiorna eventuali percorsi/versioni e compila lo script per ottenere `TruMetraPla_Setup_0.1.0.exe`.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo oppure affidandoti allo script PowerShell. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
+3. (Opzionale ma consigliato) Compila l'installer grafico con `trumetrapla build-installer`. Il comando crea `TruMetraPla_Setup_<versione>.exe` pronto per l'utente finale.
+
+### Creare l'installer automatico
+
+Per produrre un file `TruMetraPla_Setup.exe` che installi automaticamente il programma in `C:\TruMetraPla`:
+
+```powershell
+pip install .[build]
+trumetrapla build-installer
+```
+
+Il comando verifica la presenza di NSIS (`makensis`) e, se necessario, genera prima l'eseguibile stand-alone. Il risultato viene salvato nella cartella `dist/` e può essere distribuito direttamente: facendo doppio clic sull'installer viene avviata una procedura guidata che copia i file nella cartella predefinita, crea le scorciatoie sul desktop e nel menu Start e apre la finestra di benvenuto al termine dell'installazione.
+
+Per personalizzare la cartella di output:
+
+```powershell
+trumetrapla build-installer --dist C:\Percorso\Personalizzato
+```
+
+Se desideri rigenerare da zero anche l'eseguibile (ignorando eventuali build precedenti) aggiungi `--no-reuse-exe`.
 
 ### Dove viene installato il software
 
 - **Eseguibile portabile**: il comando `trumetrapla build-exe` e lo script `Setup-TruMetraPla.ps1` copiano l'eseguibile nella cartella di destinazione (`dist/` per impostazione predefinita). Il parametro `-Output` dello script PowerShell permette di scegliere una directory diversa.
-- **Installer NSIS**: lo script `TruMetraPla-Installer.nsi` installa l'applicazione in `C:\Program Files\TruMetraPla` (variabile `INSTALL_DIR`). Puoi modificare questo percorso aprendo lo script con un editor di testo e cambiando la variabile, oppure l'utente finale può selezionare una cartella differente nella prima schermata dell'installer.
+- **Installer automatico**: il comando `trumetrapla build-installer` utilizza lo script `TruMetraPla-Installer.nsi` per creare `TruMetraPla_Setup_<versione>.exe`, che installa l'applicazione in `C:\TruMetraPla` (variabile `INSTALL_DIR`). Puoi modificare questo percorso aprendo lo script con un editor di testo e cambiando la variabile, oppure l'utente finale può selezionare una cartella differente nella schermata "Cartella di installazione".
 
 ### Automazione da PowerShell
 
@@ -81,7 +115,7 @@ Per Windows è disponibile lo script `installer/Setup-TruMetraPla.ps1` che:
 - crea o aggiorna un ambiente virtuale dedicato;
 - installa il progetto con le dipendenze necessarie alla build;
 - invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
-- opzionalmente compila l'installer grafico NSIS (parametro `-IncludeInstaller`).
+- opzionalmente compila l'installer grafico NSIS (parametro `-IncludeInstaller`, che usa `trumetrapla build-installer`).
 
 Esempio di utilizzo completo:
 

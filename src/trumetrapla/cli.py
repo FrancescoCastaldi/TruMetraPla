@@ -14,7 +14,8 @@ from .metrics import (
     group_by_process,
     summarize_operations,
 )
-from .packaging import BuildError, build_windows_executable
+from . import __version__
+from .packaging import BuildError, build_windows_executable, build_windows_installer
 
 WELCOME_BANNER = r"""
 ╔══════════════════════════════════════╗
@@ -90,7 +91,8 @@ def _show_welcome(interactive: bool) -> None:
     click.echo("Opzioni disponibili:")
     click.echo("  [1] Genera un report da file Excel")
     click.echo("  [2] Genera l'eseguibile standalone TruMetraPla.exe")
-    click.echo("  [3] Script PowerShell e guida all'installer grafico")
+    click.echo("  [3] Crea l'installer automatico TruMetraPla_Setup.exe")
+    click.echo("  [4] Script PowerShell e guida avanzata")
     click.echo("  [0] Esci")
 
     if not interactive:
@@ -103,6 +105,8 @@ def _show_welcome(interactive: bool) -> None:
         elif choice == 2:
             _interactive_build_exe()
         elif choice == 3:
+            _interactive_build_installer()
+        elif choice == 4:
             _print_installer_help()
         elif choice == 0:
             click.echo("A presto!")
@@ -173,6 +177,31 @@ def _interactive_build_exe() -> None:
     click.echo()
 
 
+def _interactive_build_installer() -> None:
+    click.echo()
+    click.echo("=== Generatore installer Windows ===")
+    dist_default = Path("dist")
+    dist_input = click.prompt(
+        "Cartella di destinazione (lascia vuoto per dist/)", default=""
+    ).strip()
+    dist_path = Path(dist_input) if dist_input else dist_default
+    reuse = click.confirm(
+        "Riutilizzare un TruMetraPla.exe esistente se disponibile?",
+        default=True,
+    )
+
+    try:
+        installer_path = build_windows_installer(
+            dist_path, version=__version__, reuse_executable=reuse
+        )
+    except BuildError as error:
+        click.secho(str(error), fg="red")
+        return
+
+    click.secho(f"Installer generato: {installer_path}", fg="green")
+    click.echo()
+
+
 def _prompt_column_mapping() -> dict[str, str]:
     mapping: dict[str, str] = {}
     choices = click.Choice(_CANONICAL_FIELDS, case_sensitive=False)
@@ -199,7 +228,7 @@ def _prompt_aliases() -> dict[str, list[str]]:
 
 def _print_installer_help() -> None:
     click.echo()
-    click.echo("=== Script automatico e installer Windows ===")
+    click.echo("=== Script automatico e guida avanzata ===")
     click.echo(
         "1. Installa i requisiti di build con `pip install .[build]` oppure esegui"
         "    `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`"
@@ -209,8 +238,12 @@ def _print_installer_help() -> None:
         "    o lo script PowerShell."
     )
     click.echo(
-        "3. (Opzionale) Compila `installer/TruMetraPla-Installer.nsi` con NSIS per"
-        "    ottenere TruMetraPla_Setup.exe."
+        "3. Usa `trumetrapla build-installer` o lo script PowerShell per creare"
+        "    automaticamente TruMetraPla_Setup.exe."
+    )
+    click.echo(
+        "L'installer copia i file in `C:\\TruMetraPla` e crea collegamenti che aprono"
+        "    la finestra desktop di benvenuto."
     )
     click.echo("Trovi istruzioni dettagliate nel README del progetto.")
     click.echo()
@@ -240,6 +273,37 @@ def build_exe(dist_path: Path, onefile: bool) -> None:
         raise click.ClickException(str(error)) from error
 
     click.secho(f"Eseguibile generato in: {exe_path}", fg="green")
+
+
+@main.command("build-installer")
+@click.option(
+    "--dist",
+    "dist_path",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=Path("dist"),
+    show_default=True,
+    help="Percorso della cartella di destinazione",
+)
+@click.option(
+    "--reuse-exe/--no-reuse-exe",
+    "reuse_executable",
+    default=True,
+    show_default=True,
+    help="Riutilizza un TruMetraPla.exe esistente quando disponibile",
+)
+def build_installer(dist_path: Path, reuse_executable: bool) -> None:
+    """Compila l'installer grafico NSIS che installa TruMetraPla su Windows."""
+
+    try:
+        installer_path = build_windows_installer(
+            dist_path,
+            version=__version__,
+            reuse_executable=reuse_executable,
+        )
+    except BuildError as error:
+        raise click.ClickException(str(error)) from error
+
+    click.secho(f"Installer generato in: {installer_path}", fg="green")
 
 
 def _load_records(

@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['src/trumetrapla/__main__.py'],
+    ['src/trumetrapla/welcome_app.py'],
     pathex=['src'],
     binaries=[],
     datas=[],
@@ -30,7 +30,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,

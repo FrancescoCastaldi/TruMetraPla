@@ -4,7 +4,8 @@
 
 .DESCRIPTION
     Lo script crea (o riutilizza) un ambiente virtuale isolato, installa il progetto con le dipendenze di build,
-    esegue il comando CLI `trumetrapla build-exe` e, se richiesto, compila l'installer grafico tramite NSIS.
+    esegue il comando CLI `trumetrapla build-exe` e, se richiesto, genera automaticamente l'installer grafico
+    `TruMetraPla_Setup.exe` tramite `trumetrapla build-installer`.
 
 .PARAMETER Output
     Cartella di destinazione per l'eseguibile generato (default: cartella dist/ alla radice del repository).
@@ -13,7 +14,7 @@
     Se specificato, disabilita la modalità onefile di PyInstaller e mantiene la cartella portabile.
 
 .PARAMETER IncludeInstaller
-    Se specificato, invoca makensis per produrre l'installer grafico utilizzando TruMetraPla-Installer.nsi.
+    Se specificato, invoca `trumetrapla build-installer` per produrre automaticamente l'installer grafico NSIS.
 
 .PARAMETER ForceVenv
     Ricrea l'ambiente virtuale anche se già presente.
@@ -100,6 +101,17 @@ Write-Host 'Installazione del progetto con dipendenze di build...' -ForegroundCo
 $packageSpec = "${repoRoot}[build]"
 & $venvPip install $packageSpec | Out-Null
 
+try {
+    $packageVersion = (& $venvPython -c "import trumetrapla; print(trumetrapla.__version__)" ).Trim()
+} catch {
+    Write-Warning 'Impossibile determinare la versione del pacchetto; uso 0.0.0 come fallback.'
+    $packageVersion = '0.0.0'
+}
+if (-not $packageVersion) {
+    $packageVersion = '0.0.0'
+}
+Write-Host "Versione pacchetto installata: $packageVersion" -ForegroundColor Cyan
+
 $buildCommand = @('-m', 'trumetrapla.cli', 'build-exe', '--dist', $distDirectory)
 if ($Portable) {
     $buildCommand += '--no-onefile'
@@ -116,19 +128,17 @@ if (Test-Path $expectedExe) {
 }
 
 if ($IncludeInstaller) {
-    Write-Host 'Compilazione installer NSIS...' -ForegroundColor Cyan
-    $makensis = Get-Command makensis -ErrorAction SilentlyContinue
-    if (-not $makensis) {
-        throw 'makensis non trovato nel PATH. Installa NSIS o aggiorna la variabile di ambiente.'
-    }
+    Write-Host 'Generazione installer grafico TruMetraPla...' -ForegroundColor Cyan
+    $installerCommand = @('-m', 'trumetrapla.cli', 'build-installer', '--dist', $distDirectory)
+    & $venvPython @installerCommand
 
-    $installerScript = Join-Path $repoRoot 'installer' 'TruMetraPla-Installer.nsi'
-    if (-not (Test-Path $installerScript)) {
-        throw "Script NSIS non trovato: $installerScript"
+    $installerPattern = Join-Path $distDirectory 'TruMetraPla_Setup_*.exe'
+    $generatedInstaller = Get-ChildItem -Path $installerPattern -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($generatedInstaller) {
+        Write-Host "Installer creato in: $($generatedInstaller.FullName)" -ForegroundColor Green
+    } else {
+        Write-Warning 'Verifica l\'output del comando precedente per eventuali errori NSIS.'
     }
-
-    & $makensis.Path $installerScript
-    Write-Host 'Installer generato con successo.' -ForegroundColor Green
 }
 
 Write-Host 'Operazione completata.' -ForegroundColor Cyan
