@@ -41,7 +41,8 @@ def test_welcome_screen_is_printed():
 
     assert result.exit_code == 0
     assert "TruMetraPla Suite" in result.output
-    assert "Crea l'eseguibile Windows (.exe)" in result.output
+    assert "Genera l'eseguibile standalone TruMetraPla.exe" in result.output
+    assert "Script PowerShell e guida all'installer grafico" in result.output
 
 
 def test_build_exe_command(monkeypatch, tmp_path):

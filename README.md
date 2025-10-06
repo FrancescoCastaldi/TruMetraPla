@@ -52,9 +52,24 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 
 ## Costruire l'eseguibile Windows
 
-1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore).
-2. Genera l'eseguibile lanciando `trumetrapla build-exe` oppure utilizzando il menu interattivo. Verrà creato `TruMetraPla.exe` nella cartella `dist/`.
-3. (Opzionale) Crea un installer grafico con [NSIS](https://nsis.sourceforge.io/). Apri `installer/trumetrapla.nsi`, aggiorna eventuali percorsi/versioni e compila lo script per ottenere `TruMetraPla_Setup_0.1.0.exe`.
+1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo oppure affidandoti allo script PowerShell. Verrà creato `TruMetraPla.exe` nella cartella `dist/`.
+3. (Opzionale) Crea un installer grafico con [NSIS](https://nsis.sourceforge.io/). Apri `installer/TruMetraPla-Installer.nsi`, aggiorna eventuali percorsi/versioni e compila lo script per ottenere `TruMetraPla_Setup_0.1.0.exe`.
+
+### Automazione da PowerShell
+
+Per Windows è disponibile lo script `installer/Setup-TruMetraPla.ps1` che:
+
+- crea o aggiorna un ambiente virtuale dedicato;
+- installa il progetto con le dipendenze necessarie alla build;
+- invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
+- opzionalmente compila l'installer grafico NSIS (parametro `-IncludeInstaller`).
+
+Esempio di utilizzo completo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1 -IncludeInstaller
+```
 
 ## Utilizzo come libreria Python
 

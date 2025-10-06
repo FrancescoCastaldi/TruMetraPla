@@ -89,8 +89,8 @@ def _show_welcome(interactive: bool) -> None:
     click.echo()
     click.echo("Opzioni disponibili:")
     click.echo("  [1] Genera un report da file Excel")
-    click.echo("  [2] Crea l'eseguibile Windows (.exe)")
-    click.echo("  [3] Guida alla creazione dell'installer")
+    click.echo("  [2] Genera l'eseguibile standalone TruMetraPla.exe")
+    click.echo("  [3] Script PowerShell e guida all'installer grafico")
     click.echo("  [0] Esci")
 
     if not interactive:
@@ -199,17 +199,20 @@ def _prompt_aliases() -> dict[str, list[str]]:
 
 def _print_installer_help() -> None:
     click.echo()
-    click.echo("=== Guida alla creazione dell'installer Windows (.exe) ===")
-    click.echo("1. Assicurati di aver installato i requisiti: `pip install .[build]`")
+    click.echo("=== Script automatico e installer Windows ===")
     click.echo(
-        "2. Usa il comando `trumetrapla build-exe` o il menu interattivo per ottenere"
-        " TruMetraPla.exe"
+        "1. Installa i requisiti di build con `pip install .[build]` oppure esegui"
+        "    `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`"
     )
     click.echo(
-        "3. (Opzionale) Compila `installer/trumetrapla.nsi` con NSIS per generare"
-        " l'installer grafico TruMetraPla_Setup.exe"
+        "2. Genera TruMetraPla.exe tramite `trumetrapla build-exe`, il menu interattivo"
+        "    o lo script PowerShell."
     )
-    click.echo("Trovi ulteriori dettagli nel README del progetto.")
+    click.echo(
+        "3. (Opzionale) Compila `installer/TruMetraPla-Installer.nsi` con NSIS per"
+        "    ottenere TruMetraPla_Setup.exe."
+    )
+    click.echo("Trovi istruzioni dettagliate nel README del progetto.")
     click.echo()
 
 
