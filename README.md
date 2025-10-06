@@ -69,6 +69,11 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo oppure affidandoti allo script PowerShell. Verrà creato `TruMetraPla.exe` nella cartella `dist/`.
 3. (Opzionale) Crea un installer grafico con [NSIS](https://nsis.sourceforge.io/). Apri `installer/TruMetraPla-Installer.nsi`, aggiorna eventuali percorsi/versioni e compila lo script per ottenere `TruMetraPla_Setup_0.1.0.exe`.
 
+### Dove viene installato il software
+
+- **Eseguibile portabile**: il comando `trumetrapla build-exe` e lo script `Setup-TruMetraPla.ps1` copiano l'eseguibile nella cartella di destinazione (`dist/` per impostazione predefinita). Il parametro `-Output` dello script PowerShell permette di scegliere una directory diversa.
+- **Installer NSIS**: lo script `TruMetraPla-Installer.nsi` installa l'applicazione in `C:\Program Files\TruMetraPla` (variabile `INSTALL_DIR`). Puoi modificare questo percorso aprendo lo script con un editor di testo e cambiando la variabile, oppure l'utente finale può selezionare una cartella differente nella prima schermata dell'installer.
+
 ### Automazione da PowerShell
 
 Per Windows è disponibile lo script `installer/Setup-TruMetraPla.ps1` che:
