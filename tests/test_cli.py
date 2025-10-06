@@ -24,7 +24,7 @@ def test_cli_outputs_summary(tmp_path):
         ]
     )
     excel_path = tmp_path / "cli.xlsx"
-    frame.to_excel(excel_path, index=False)
+frame.to_excel(excel_path, index=False)
 
     runner = CliRunner()
     result = runner.invoke(main, ["report", str(excel_path)])
