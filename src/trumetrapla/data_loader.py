@@ -15,7 +15,13 @@ _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "date": ("data", "date", "giorno"),
     "employee": ("dipendente", "operatore", "employee"),
     "process": ("processo", "fase", "process"),
-    "quantity": ("quantità", "pezzi", "quantity", "pieces"),
+    "quantity": (
+        "quantità",
+        "pezzi",
+        "pezzi prodotti",
+        "quantity",
+        "pieces",
+    ),
     "duration_minutes": ("durata (min)", "durata", "minuti", "duration", "minutes"),
 }
 
@@ -136,10 +142,11 @@ def _resolve_column_name(
             return normalized_columns[token]
 
     raise ColumnMappingError(
-        """
-        Impossibile individuare la colonna per il campo '{field}'. Specificare
-        'column_mapping' o rinominare le intestazioni nel file Excel.
-        """.strip()
+        (
+            "Impossibile individuare la colonna per il campo "
+            f"'{field}'. Specificare 'column_mapping' o rinominare le "
+            "intestazioni nel file Excel."
+        )
     )
 
 
