@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Callable, Dict, Mapping, Protocol
-
-from .data_loader import ColumnMappingError, load_operations_from_excel
-from .metrics import group_by_employee, group_by_process, summarize_operations
-from .models import OperationRecord
+from dataclasses import dataclass
+from typing import Callable, Dict, Protocol
 
 
 class GUIUnavailableError(RuntimeError):
@@ -20,13 +15,9 @@ class _TkRoot(Protocol):
 
     def geometry(self, value: str) -> None: ...
 
-    def minsize(self, width: int, height: int) -> None: ...
-
     def resizable(self, width: bool, height: bool) -> None: ...
 
     def configure(self, **kwargs: object) -> None: ...
-
-    def config(self, **kwargs: object) -> None: ...
 
     def mainloop(self) -> None: ...
 
@@ -38,31 +29,12 @@ class _Toolkit:
     tk: object
     ttk: object
     messagebox: object
-    filedialog: object
-
-
-@dataclass
-class _AppState:
-    """Stato condiviso dell'interfaccia grafica."""
-
-    records: list[OperationRecord] = field(default_factory=list)
-    filtered_records: list[OperationRecord] = field(default_factory=list)
-    file_path: Path | None = None
-
-
-@dataclass
-class WelcomeWindowHandles:
-    """Informazioni utili per i test sulla finestra creata."""
-
-    root: _TkRoot
-    state: _AppState
-    commands: Mapping[str, Callable[[], None]]
 
 
 def _load_toolkit() -> _Toolkit:
     try:
         import tkinter as tk  # type: ignore
-        from tkinter import filedialog, messagebox, ttk  # type: ignore
+        from tkinter import messagebox, ttk  # type: ignore
     except ModuleNotFoundError as exc:
         raise GUIUnavailableError(
             "Tkinter non è disponibile in questo ambiente: installa il runtime grafico di Windows."
@@ -70,17 +42,16 @@ def _load_toolkit() -> _Toolkit:
     except Exception as exc:  # pragma: no cover - percorso imprevisto
         raise GUIUnavailableError("Impossibile inizializzare Tkinter.") from exc
 
-    return _Toolkit(tk=tk, ttk=ttk, messagebox=messagebox, filedialog=filedialog)
+    return _Toolkit(tk=tk, ttk=ttk, messagebox=messagebox)
 
 
 def launch_welcome_window(
     root_factory: Callable[[], _TkRoot] | None = None,
     *,
     run_mainloop: bool = True,
-    operations_loader: Callable[[Path], list[OperationRecord]] | None = None,
     _toolkit: Dict[str, object] | None = None,
-) -> WelcomeWindowHandles | None:
-    """Mostra la finestra grafica principale di TruMetraPla."""
+) -> None:
+    """Mostra la finestra grafica di benvenuto di TruMetraPla."""
 
     if _toolkit is None:
         toolkit = _load_toolkit()
@@ -90,192 +61,51 @@ def launch_welcome_window(
                 tk=_toolkit["tk"],
                 ttk=_toolkit["ttk"],
                 messagebox=_toolkit["messagebox"],
-                filedialog=_toolkit["filedialog"],
             )
         except KeyError as exc:  # pragma: no cover - uso errato del parametro privato
             raise GUIUnavailableError("Toolkit grafico incompleto.") from exc
 
-        if (
-            toolkit.tk is None
-            or toolkit.ttk is None
-            or toolkit.messagebox is None
-            or toolkit.filedialog is None
-        ):
+        if toolkit.tk is None or toolkit.ttk is None or toolkit.messagebox is None:
             raise GUIUnavailableError("Toolkit grafico non valido.")
 
     tk = toolkit.tk
     ttk = toolkit.ttk
     messagebox = toolkit.messagebox
-    filedialog = toolkit.filedialog
 
     if root_factory is None:
         root: _TkRoot = tk.Tk()
     else:
         root = root_factory()
 
-    root.title("TruMetraPla - Console Analitica")
-    root.geometry("960x600")
-    try:
-        root.minsize(860, 520)
-    except Exception:  # pragma: no cover - alcuni stub potrebbero non implementare minsize
-        pass
-    root.resizable(True, True)
+    root.title("TruMetraPla - Benvenuto")
+    root.geometry("480x320")
+    root.resizable(False, False)
 
     try:
         root.configure(background="#f4f5f7")
     except Exception:  # pragma: no cover - alcuni stub di test non implementano configure
         pass
 
-    state = _AppState()
-    loader = operations_loader or (lambda path: load_operations_from_excel(path))
+    frame = ttk.Frame(root, padding=20)
+    frame.pack(expand=True, fill="both")
 
-    # Variabili di stato testuali
-    file_var = tk.StringVar(value="Nessun file Excel aperto")
-    summary_var = tk.StringVar(value="Carica un file per visualizzare i KPI")
-    status_var = tk.StringVar(value="Pronto")
+    title_label = ttk.Label(
+        frame,
+        text="Benvenuto in TruMetraPla",
+        font=("Segoe UI", 16, "bold"),
+        justify="center",
+    )
+    title_label.pack(pady=(0, 12))
 
-    # Menu principale
-    menubar = tk.Menu(root)
-    file_menu = tk.Menu(menubar, tearoff=0)
-    tools_menu = tk.Menu(menubar, tearoff=0)
-    help_menu = tk.Menu(menubar, tearoff=0)
+    description = (
+        "Grazie per aver installato TruMetraPla su Windows.\n"
+        "Genera KPI di produttività e report immediati partendo dai tuoi file Excel."
+    )
+    body_label = ttk.Label(frame, text=description, wraplength=420, justify="center")
+    body_label.pack(pady=(0, 16))
 
-    def _update_table(records: list[OperationRecord]) -> None:
-        tree.delete(*tree.get_children())
-        for record in records:
-            tree.insert(
-                "",
-                "end",
-                values=(
-                    record.date.strftime("%d/%m/%Y"),
-                    record.employee,
-                    record.process,
-                    f"{record.quantity}",
-                    f"{record.duration_minutes:.1f}",
-                    f"{record.productivity_per_hour:.2f}",
-                ),
-            )
-
-    def _format_summary(records: list[OperationRecord]) -> str:
-        if not records:
-            return "Nessun dato disponibile"
-
-        summary = summarize_operations(records)
-        return (
-            "Record: {records} | Quantità totali: {qty} | Ore totali: {hours:.2f} | "
-            "Throughput medio: {throughput:.2f} pezzi/ora | Dipendenti: {employees} | Processi: {processes}"
-        ).format(
-            records=len(records),
-            qty=summary.total_quantity,
-            hours=summary.total_hours,
-            throughput=summary.throughput,
-            employees=summary.employees,
-            processes=summary.processes,
-        )
-
-    def _apply_filters() -> None:
-        employee_value = employee_var.get()
-        process_value = process_var.get()
-
-        filtered = [
-            record
-            for record in state.records
-            if (employee_value in {"", "Tutti"} or record.employee == employee_value)
-            and (process_value in {"", "Tutti"} or record.process == process_value)
-        ]
-
-        state.filtered_records = filtered
-        _update_table(filtered)
-        summary_var.set(_format_summary(filtered))
-
-    def _refresh_filters(records: list[OperationRecord]) -> None:
-        employees = sorted({record.employee for record in records})
-        processes = sorted({record.process for record in records})
-
-        employee_combo.configure(values=["Tutti"] + employees)
-        process_combo.configure(values=["Tutti"] + processes)
-        employee_combo.current(0)
-        process_combo.current(0)
-        state.filtered_records = records
-
-    def _open_file() -> None:
-        path_str = filedialog.askopenfilename(
-            title="Seleziona un file Excel",
-            filetypes=(
-                ("File Excel", "*.xlsx *.xlsm *.xls *.xlsb"),
-                ("Tutti i file", "*.*"),
-            ),
-        )
-
-        if not path_str:
-            return
-
-        excel_path = Path(path_str)
-
-        try:
-            records = loader(excel_path)
-        except FileNotFoundError:
-            messagebox.showerror("File non trovato", f"Il file {excel_path} non esiste.")
-            return
-        except ColumnMappingError as exc:
-            messagebox.showerror("Colonne mancanti", str(exc))
-            return
-        except Exception as exc:  # pragma: no cover - errori imprevisti
-            messagebox.showerror("Errore", f"Impossibile leggere il file: {exc}")
-            return
-
-        state.records = records
-        state.file_path = excel_path
-        file_var.set(f"File corrente: {excel_path}")
-        status_var.set(f"Caricate {len(records)} righe dal file Excel")
-        _refresh_filters(records)
-        _apply_filters()
-
-    def _show_kpi_dialog() -> None:
-        if not state.filtered_records:
-            messagebox.showinfo(
-                "Nessun dato",
-                "Carica un file Excel e applica eventuali filtri per visualizzare i KPI.",
-            )
-            return
-
-        summary = summarize_operations(state.filtered_records)
-        top_employees = group_by_employee(state.filtered_records)[:3]
-        top_processes = group_by_process(state.filtered_records)[:3]
-
-        def _format_entities(entities: list) -> str:
-            if not entities:
-                return "Nessuno"
-            return "\n".join(
-                f"- {item.entity}: {item.total_quantity} pezzi ({item.throughput:.2f} pz/ora)"
-                for item in entities
-            )
-
-        message = (
-            "Quantità totali: {qty}\n"
-            "Ore totali: {hours:.2f}\n"
-            "Throughput medio: {throughput:.2f} pezzi/ora\n"
-            "Dipendenti unici: {employees}\n"
-            "Processi monitorati: {processes}\n\n"
-            "Top dipendenti:\n{top_employees}\n\n"
-            "Top processi:\n{top_processes}"
-        ).format(
-            qty=summary.total_quantity,
-            hours=summary.total_hours,
-            throughput=summary.throughput,
-            employees=summary.employees,
-            processes=summary.processes,
-            top_employees=_format_entities(top_employees),
-            top_processes=_format_entities(top_processes),
-        )
-
-        messagebox.showinfo("KPI principali", message)
-
-    file_menu.add_command(label="Apri file Excel…", command=_open_file)
-    file_menu.add_separator()
-    file_menu.add_command(label="Esci", command=root.destroy)
-
-    tools_menu.add_command(label="Mostra KPI filtrati", command=_show_kpi_dialog)
+    button_area = ttk.Frame(frame)
+    button_area.pack(pady=(0, 20))
 
     def _open_docs() -> None:
         import webbrowser
@@ -285,107 +115,22 @@ def launch_welcome_window(
             new=2,
         )
 
-    help_menu.add_command(label="Documentazione", command=_open_docs)
+    def _show_cli_hint() -> None:
+        messagebox.showinfo(
+            "Modalità avanzata",
+            "Apri il Prompt dei comandi e digita `trumetrapla --no-interactive` per la CLI.",
+        )
 
-    menubar.add_cascade(label="File", menu=file_menu)
-    menubar.add_cascade(label="Strumenti", menu=tools_menu)
-    menubar.add_cascade(label="Aiuto", menu=help_menu)
+    docs_button = ttk.Button(button_area, text="Guida rapida", command=_open_docs)
+    docs_button.pack(side="left", padx=6)
 
-    try:
-        root.config(menu=menubar)
-    except Exception:  # pragma: no cover - alcuni stub potrebbero non implementare config
-        pass
+    cli_button = ttk.Button(button_area, text="Usa la CLI", command=_show_cli_hint)
+    cli_button.pack(side="left", padx=6)
 
-    # Layout principale
-    main_frame = ttk.Frame(root, padding=16)
-    main_frame.pack(expand=True, fill="both")
-
-    header = ttk.Frame(main_frame)
-    header.pack(fill="x")
-
-    ttk.Label(header, textvariable=file_var, font=("Segoe UI", 11, "bold"), anchor="w").pack(
-        fill="x", pady=(0, 4)
-    )
-    ttk.Label(header, textvariable=summary_var, wraplength=920, anchor="w").pack(
-        fill="x"
-    )
-
-    filters_frame = ttk.Frame(main_frame)
-    filters_frame.pack(fill="x", pady=12)
-
-    employee_var = tk.StringVar(value="Tutti")
-    process_var = tk.StringVar(value="Tutti")
-
-    ttk.Label(filters_frame, text="Dipendente:").pack(side="left", padx=(0, 6))
-    employee_combo = ttk.Combobox(
-        filters_frame, width=28, state="readonly", textvariable=employee_var
-    )
-    employee_combo.pack(side="left")
-    employee_combo.configure(values=["Tutti"])
-    employee_combo.current(0)
-
-    ttk.Label(filters_frame, text="Processo:").pack(side="left", padx=(16, 6))
-    process_combo = ttk.Combobox(
-        filters_frame, width=28, state="readonly", textvariable=process_var
-    )
-    process_combo.pack(side="left")
-    process_combo.configure(values=["Tutti"])
-    process_combo.current(0)
-
-    filter_button = ttk.Button(filters_frame, text="Applica filtri", command=_apply_filters)
-    filter_button.pack(side="left", padx=(16, 0))
-
-    table_frame = ttk.Frame(main_frame)
-    table_frame.pack(fill="both", expand=True)
-
-    columns = ("date", "employee", "process", "quantity", "duration", "throughput")
-    tree = ttk.Treeview(
-        table_frame,
-        columns=columns,
-        show="headings",
-        height=15,
-    )
-
-    headings = {
-        "date": "Data",
-        "employee": "Dipendente",
-        "process": "Processo",
-        "quantity": "Pezzi",
-        "duration": "Durata (min)",
-        "throughput": "Pezzi/ora",
-    }
-
-    for column in columns:
-        tree.heading(column, text=headings[column])
-        anchor = "center" if column != "employee" and column != "process" else "w"
-        tree.column(column, anchor=anchor, width=140 if column != "quantity" else 100)
-
-    vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
-    hsb = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
-    tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-
-    tree.pack(side="left", fill="both", expand=True)
-    vsb.pack(side="left", fill="y")
-    hsb.pack(side="bottom", fill="x")
-
-    footer = ttk.Frame(main_frame)
-    footer.pack(fill="x", pady=(12, 0))
-
-    ttk.Button(footer, text="Apri file Excel…", command=_open_file).pack(side="left")
-    ttk.Button(footer, text="Mostra KPI", command=_show_kpi_dialog).pack(side="left", padx=8)
-    ttk.Label(footer, textvariable=status_var).pack(side="right")
-
-    employee_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
-    process_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
-
-    commands: dict[str, Callable[[], None]] = {
-        "open_file": _open_file,
-        "show_kpi": _show_kpi_dialog,
-        "apply_filters": _apply_filters,
-    }
+    close_button = ttk.Button(frame, text="Chiudi", command=root.destroy)
+    close_button.pack()
 
     if run_mainloop:
         root.mainloop()
-        return None
 
-    return WelcomeWindowHandles(root=root, state=state, commands=commands)
+    return None

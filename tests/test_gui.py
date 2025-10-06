@@ -1,47 +1,16 @@
 import types
-from datetime import date
-from pathlib import Path
 
 import pytest
 
 from trumetrapla.gui import GUIUnavailableError, launch_welcome_window
-from trumetrapla.models import OperationRecord
-
-
-class DummyStringVar:
-    def __init__(self, value: str = "") -> None:
-        self._value = value
-
-    def set(self, value: str) -> None:
-        self._value = value
-
-    def get(self) -> str:
-        return self._value
-
-
-class DummyMenu:
-    def __init__(self, *_args, **_kwargs) -> None:
-        self.items: list[tuple[str, tuple]] = []
-
-    def add_command(self, label: str, command=None, **_kwargs) -> None:
-        self.items.append(("command", (label, command)))
-
-    def add_separator(self) -> None:
-        self.items.append(("separator", tuple()))
-
-    def add_cascade(self, label: str, menu) -> None:
-        self.items.append(("cascade", (label, menu)))
 
 
 class DummyRoot:
-    def __init__(self, tk_module: "DummyTkModule") -> None:
-        self.tk_module = tk_module
-        self.title_value: str | None = None
-        self.geometry_value: str | None = None
-        self.minsize_value: tuple[int, int] | None = None
-        self.resizable_value: tuple[bool, bool] | None = None
-        self.configure_calls: list[dict[str, object]] = []
-        self.config_calls: list[dict[str, object]] = []
+    def __init__(self) -> None:
+        self.title_value = None
+        self.geometry_value = None
+        self.resizable_value = None
+        self.configure_calls = []
         self.mainloop_called = False
 
     def title(self, value: str) -> None:
@@ -50,17 +19,11 @@ class DummyRoot:
     def geometry(self, value: str) -> None:
         self.geometry_value = value
 
-    def minsize(self, width: int, height: int) -> None:
-        self.minsize_value = (width, height)
-
     def resizable(self, width: bool, height: bool) -> None:
         self.resizable_value = (width, height)
 
     def configure(self, **kwargs: object) -> None:
         self.configure_calls.append(kwargs)
-
-    def config(self, **kwargs: object) -> None:
-        self.config_calls.append(kwargs)
 
     def destroy(self) -> None:  # pragma: no cover - richiamato dai pulsanti
         pass
@@ -72,18 +35,10 @@ class DummyRoot:
 class DummyWidget:
     def __init__(self, *args, **kwargs) -> None:
         self.kwargs = kwargs
-        self.pack_calls: list[dict[str, object]] = []
-        self.configure_calls: list[dict[str, object]] = []
-        self.bind_calls: list[tuple[str, object]] = []
+        self.pack_calls = []
 
     def pack(self, **kwargs) -> None:
         self.pack_calls.append(kwargs)
-
-    def configure(self, **kwargs) -> None:
-        self.configure_calls.append(kwargs)
-
-    def bind(self, event: str, callback) -> None:
-        self.bind_calls.append((event, callback))
 
 
 class DummyButton(DummyWidget):
@@ -92,175 +47,43 @@ class DummyButton(DummyWidget):
         self.command = command
 
 
-class DummyCombobox(DummyWidget):
-    def __init__(self, *args, textvariable=None, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.values: list[str] = []
-        self.textvariable = textvariable or DummyStringVar()
-        self.current_index: int = 0
-
-    def configure(self, **kwargs) -> None:  # type: ignore[override]
-        super().configure(**kwargs)
-        if "values" in kwargs:
-            self.values = list(kwargs["values"])
-
-    def current(self, index: int) -> None:
-        self.current_index = index
-        if self.values:
-            self.textvariable.set(self.values[index])
-
-    def get(self) -> str:
-        return self.textvariable.get()
-
-
-class DummyTreeview(DummyWidget):
-    def __init__(self, *args, columns=(), **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.columns = columns
-        self.headings: dict[str, str] = {}
-        self.column_options: dict[str, dict[str, object]] = {}
-        self.items: dict[str, tuple] = {}
-        self._next_id = 0
-        self.yscroll = None
-        self.xscroll = None
-
-    def heading(self, column: str, text: str) -> None:
-        self.headings[column] = text
-
-    def column(self, column: str, **kwargs) -> None:
-        self.column_options[column] = kwargs
-
-    def insert(self, *_args, values=(), **_kwargs) -> str:
-        identifier = f"I{self._next_id}"
-        self._next_id += 1
-        self.items[identifier] = values
-        return identifier
-
-    def get_children(self) -> list[str]:
-        return list(self.items.keys())
-
-    def delete(self, *item_ids: str) -> None:
-        if not item_ids:
-            self.items.clear()
-        for item_id in item_ids:
-            self.items.pop(item_id, None)
-
-    def configure(self, **kwargs) -> None:  # type: ignore[override]
-        super().configure(**kwargs)
-        if "yscrollcommand" in kwargs:
-            self.yscroll = kwargs["yscrollcommand"]
-        if "xscrollcommand" in kwargs:
-            self.xscroll = kwargs["xscrollcommand"]
-
-    def yview(self, *args, **kwargs) -> tuple:
-        return args  # pragma: no cover - utilizzato solo come callback
-
-    def xview(self, *args, **kwargs) -> tuple:
-        return args  # pragma: no cover - utilizzato solo come callback
-
-
-class DummyScrollbar(DummyWidget):
-    def __init__(self, *args, command=None, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.command = command
-        self.set_calls: list[tuple[object, object]] = []
-
-    def set(self, first, last) -> None:
-        self.set_calls.append((first, last))
-
-
-class DummyMessagebox:
-    def __init__(self) -> None:
-        self.info_calls: list[tuple[str, str]] = []
-        self.error_calls: list[tuple[str, str]] = []
-
-    def showinfo(self, title: str, message: str) -> None:
-        self.info_calls.append((title, message))
-
-    def showerror(self, title: str, message: str) -> None:
-        self.error_calls.append((title, message))
-
-
-class DummyFileDialog:
-    def __init__(self) -> None:
-        self.return_value: str = ""
-        self.calls: list[dict[str, object]] = []
-
-    def askopenfilename(self, **kwargs) -> str:
-        self.calls.append(kwargs)
-        return self.return_value
-
-
 class DummyTkModule:
     def __init__(self) -> None:
         self.instances: list[DummyRoot] = []
-        self.Menu = DummyMenu
-        self.StringVar = DummyStringVar
 
     def Tk(self) -> DummyRoot:
-        root = DummyRoot(self)
+        root = DummyRoot()
         self.instances.append(root)
         return root
 
 
 class DummyToolkit(dict):
     def __init__(self) -> None:
-        self.tk_module = DummyTkModule()
-        self.messagebox = DummyMessagebox()
-        self.filedialog = DummyFileDialog()
-        self.ttk_module = types.SimpleNamespace(
-            Frame=DummyWidget,
-            Label=DummyWidget,
-            Button=DummyButton,
-            Combobox=DummyCombobox,
-            Treeview=DummyTreeview,
-            Scrollbar=DummyScrollbar,
-        )
+        tk_module = DummyTkModule()
         super().__init__(
-            tk=self.tk_module,
-            ttk=self.ttk_module,
-            messagebox=self.messagebox,
-            filedialog=self.filedialog,
+            tk=tk_module,
+            ttk=types.SimpleNamespace(
+                Frame=DummyWidget,
+                Label=DummyWidget,
+                Button=DummyButton,
+            ),
+            messagebox=types.SimpleNamespace(showinfo=lambda *_, **__: None),
         )
+        self.tk_module = tk_module
 
 
-def test_launch_welcome_window_loads_excel_and_updates_state():
+def test_launch_welcome_window_builds_basic_layout():
     toolkit = DummyToolkit()
-    sample_records = [
-        OperationRecord(date=date(2024, 1, 1), employee="Anna", process="Taglio", quantity=10, duration_minutes=60),
-        OperationRecord(date=date(2024, 1, 2), employee="Luca", process="Assemblaggio", quantity=8, duration_minutes=90),
-    ]
 
-    loader_calls: dict[str, Path] = {}
+    launch_welcome_window(run_mainloop=False, _toolkit=toolkit)
 
-    def fake_loader(path: Path) -> list[OperationRecord]:
-        loader_calls["path"] = path
-        return sample_records
-
-    toolkit.filedialog.return_value = "C:/dati.xlsx"
-
-    handles = launch_welcome_window(
-        run_mainloop=False,
-        operations_loader=fake_loader,
-        _toolkit=toolkit,
-    )
-
-    assert handles is not None
-    root = handles.root
-    assert root.title_value == "TruMetraPla - Console Analitica"
-    assert root.resizable_value == (True, True)
-
-    handles.commands["open_file"]()
-
-    assert loader_calls["path"] == Path("C:/dati.xlsx")
-    assert handles.state.records == sample_records
-    assert handles.state.filtered_records == sample_records
-    assert toolkit.messagebox.error_calls == []
+    assert toolkit.tk_module.instances
+    root = toolkit.tk_module.instances[0]
+    assert root.title_value == "TruMetraPla - Benvenuto"
+    assert root.geometry_value == "480x320"
+    assert root.resizable_value == (False, False)
 
 
 def test_launch_welcome_window_requires_valid_toolkit():
     with pytest.raises(GUIUnavailableError):
-        launch_welcome_window(
-            run_mainloop=False,
-            _toolkit={"tk": None, "ttk": None, "messagebox": None, "filedialog": None},
-        )
+        launch_welcome_window(run_mainloop=False, _toolkit={"tk": None, "ttk": None})
