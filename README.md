@@ -17,6 +17,19 @@ Il progetto utilizza Python 3.11+. Per installare le dipendenze in modalità svi
 pip install -e .[test]
 ```
 
+### Requisiti per l'installazione su Windows
+
+Per creare ed eseguire l'installer Windows assicurati di avere a disposizione:
+
+1. **Sistema operativo**: Windows 10 o Windows 11 a 64 bit con tutti gli aggiornamenti recenti.
+2. **Python**: versione 3.11 o superiore installata dal [Microsoft Store](https://www.microsoft.com/store/productId/9PJPW5LDXLZ5) oppure dal sito ufficiale, con l'opzione "Aggiungi Python al PATH" abilitata.
+3. **PowerShell**: versione 5.1 o PowerShell 7+ per poter eseguire lo script `installer/Setup-TruMetraPla.ps1`.
+4. **Strumenti di compilazione**: Microsoft Visual C++ Build Tools o un'installazione recente di Visual Studio con il carico di lavoro "Sviluppo desktop con C++" per garantire la disponibilità dei compilatori necessari a PyInstaller.
+5. **Dipendenze Python**: pacchetti elencati nell'extra `build` (`pip install .[build]`), che includono PyInstaller.
+6. **NSIS (opzionale)**: se desideri generare anche l'installer grafico, installa [Nullsoft Scriptable Install System](https://nsis.sourceforge.io/Download).
+
+Tutti i requisiti vengono gestiti automaticamente dallo script PowerShell, che verifica la presenza di Python e, se necessario, crea l'ambiente virtuale e installa le dipendenze.
+
 ## Interfaccia di benvenuto
 
 Dopo l'installazione è disponibile il comando `trumetrapla`. Se avviato senza argomenti mostra l'interfaccia di benvenuto che permette di:
