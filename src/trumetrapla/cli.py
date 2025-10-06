@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Iterable
 
 import click
 
@@ -13,9 +14,34 @@ from .metrics import (
     group_by_process,
     summarize_operations,
 )
+from .packaging import BuildError, build_windows_executable
+
+WELCOME_BANNER = r"""
+╔══════════════════════════════════════╗
+║           TruMetraPla Suite          ║
+╚══════════════════════════════════════╝
+"""
+
+_CANONICAL_FIELDS = ("date", "employee", "process", "quantity", "duration_minutes")
 
 
-@click.command()
+@click.group(invoke_without_command=True)
+@click.option(
+    "--interactive/--no-interactive",
+    default=True,
+    help="Mostra il menu interattivo di benvenuto (attivo di default)",
+)
+@click.pass_context
+def main(ctx: click.Context, interactive: bool) -> None:
+    """Entrypoint principale della CLI."""
+
+    if ctx.invoked_subcommand is not None:
+        return
+
+    _show_welcome(interactive)
+
+
+@main.command()
 @click.argument("excel_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option(
     "--sheet",
@@ -42,26 +68,200 @@ from .metrics import (
     metavar="CAMPO NOME",
     help="Aggiunge un alias personalizzato per l'autoricnoscimento delle colonne",
 )
-def main(
+def report(
     excel_path: Path,
     sheet_name: int | str,
     columns: tuple[tuple[str, str], ...],
     alias_options: tuple[tuple[str, str], ...],
 ) -> None:
-    """Legge un file Excel e mostra un riepilogo della produttività."""
+    """Genera un riepilogo della produttività da un file Excel."""
 
     column_mapping = _tuples_to_mapping(columns)
     aliases = _collect_aliases(alias_options)
+    records = _load_records(excel_path, sheet_name, column_mapping, aliases)
+    _render_report(records)
+
+
+def _show_welcome(interactive: bool) -> None:
+    click.echo(WELCOME_BANNER)
+    click.echo("Benvenuto in TruMetraPla!")
+    click.echo("Analizza i dati di produzione, genera KPI e prepara report professionali.")
+    click.echo()
+    click.echo("Opzioni disponibili:")
+    click.echo("  [1] Genera un report da file Excel")
+    click.echo("  [2] Genera l'eseguibile standalone TruMetraPla.exe")
+    click.echo("  [3] Script PowerShell e guida all'installer grafico")
+    click.echo("  [0] Esci")
+
+    if not interactive:
+        return
+
+    while True:
+        choice = click.prompt("Seleziona un'opzione", type=int, default=1)
+        if choice == 1:
+            _interactive_report()
+        elif choice == 2:
+            _interactive_build_exe()
+        elif choice == 3:
+            _print_installer_help()
+        elif choice == 0:
+            click.echo("A presto!")
+            return
+        else:
+            click.secho("Scelta non valida, riprova.", fg="yellow")
+
+
+def _interactive_report() -> None:
+    excel_input = click.prompt("Percorso del file Excel")
+    excel_path = Path(excel_input).expanduser()
+
+    sheet_input = click.prompt(
+        "Foglio da analizzare (nome o indice, lascia vuoto per 0)", default=""
+    ).strip()
+    sheet_name: int | str | None
+    if not sheet_input:
+        sheet_name = 0
+    else:
+        try:
+            sheet_name = int(sheet_input)
+        except ValueError:
+            sheet_name = sheet_input
+
+    column_mapping: dict[str, str] = {}
+    if click.confirm("Vuoi specificare manualmente le colonne?", default=False):
+        column_mapping = _prompt_column_mapping()
+
+    aliases: dict[str, list[str]] = {}
+    if click.confirm(
+        "Vuoi aggiungere alias aggiuntivi per l'autoricnoscimento delle colonne?",
+        default=False,
+    ):
+        aliases = _prompt_aliases()
 
     try:
-        records = load_operations_from_excel(
-            excel_path, sheet_name=sheet_name, column_mapping=column_mapping, aliases=aliases
+        records = _load_records(excel_path, sheet_name, column_mapping, aliases)
+    except click.ClickException as error:
+        click.secho(str(error), fg="red")
+        return
+    except click.FileError as error:
+        click.secho(str(error), fg="red")
+        return
+
+    _render_report(records)
+
+
+def _interactive_build_exe() -> None:
+    click.echo()
+    click.echo("=== Generatore eseguibile Windows ===")
+    dist_default = Path("dist")
+    dist_input = click.prompt(
+        "Cartella di destinazione (lascia vuoto per dist/)",
+        default="",
+    ).strip()
+    dist_path = Path(dist_input) if dist_input else dist_default
+    onefile = click.confirm(
+        "Vuoi creare un singolo file TruMetraPla.exe?", default=True
+    )
+
+    try:
+        exe_path = build_windows_executable(dist_path, onefile=onefile)
+    except BuildError as error:
+        click.secho(str(error), fg="red")
+        return
+
+    click.secho(f"Eseguibile generato: {exe_path}", fg="green")
+    click.echo()
+
+
+def _prompt_column_mapping() -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    choices = click.Choice(_CANONICAL_FIELDS, case_sensitive=False)
+    while True:
+        field = click.prompt("Campo canonico", type=choices).casefold()
+        column_name = click.prompt("Nome della colonna nel file").strip()
+        mapping[field] = column_name
+        if not click.confirm("Aggiungere un'altra mappatura?", default=False):
+            break
+    return mapping
+
+
+def _prompt_aliases() -> dict[str, list[str]]:
+    aliases: dict[str, list[str]] = {}
+    choices = click.Choice(_CANONICAL_FIELDS, case_sensitive=False)
+    while True:
+        field = click.prompt("Campo canonico", type=choices).casefold()
+        alias_value = click.prompt("Alias da aggiungere").strip()
+        aliases.setdefault(field, []).append(alias_value)
+        if not click.confirm("Aggiungere un altro alias?", default=False):
+            break
+    return aliases
+
+
+def _print_installer_help() -> None:
+    click.echo()
+    click.echo("=== Script automatico e installer Windows ===")
+    click.echo(
+        "1. Installa i requisiti di build con `pip install .[build]` oppure esegui"
+        "    `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`"
+    )
+    click.echo(
+        "2. Genera TruMetraPla.exe tramite `trumetrapla build-exe`, il menu interattivo"
+        "    o lo script PowerShell."
+    )
+    click.echo(
+        "3. (Opzionale) Compila `installer/TruMetraPla-Installer.nsi` con NSIS per"
+        "    ottenere TruMetraPla_Setup.exe."
+    )
+    click.echo("Trovi istruzioni dettagliate nel README del progetto.")
+    click.echo()
+
+
+@main.command("build-exe")
+@click.option(
+    "--dist",
+    "dist_path",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=Path("dist"),
+    show_default=True,
+    help="Percorso della cartella di destinazione",
+)
+@click.option(
+    "--onefile/--no-onefile",
+    default=True,
+    show_default=True,
+    help="Genera un singolo file TruMetraPla.exe",
+)
+def build_exe(dist_path: Path, onefile: bool) -> None:
+    """Costruisce l'eseguibile Windows (.exe) utilizzando PyInstaller."""
+
+    try:
+        exe_path = build_windows_executable(dist_path, onefile=onefile)
+    except BuildError as error:
+        raise click.ClickException(str(error)) from error
+
+    click.secho(f"Eseguibile generato in: {exe_path}", fg="green")
+
+
+def _load_records(
+    excel_path: Path,
+    sheet_name: int | str | None,
+    column_mapping: dict[str, str],
+    aliases: dict[str, list[str]],
+) -> list:
+    try:
+        return load_operations_from_excel(
+            excel_path,
+            sheet_name=sheet_name,
+            column_mapping=column_mapping or None,
+            aliases=aliases or None,
         )
-    except FileNotFoundError as error:
-        raise click.FileError(filename=str(error.args[0]))
+    except FileNotFoundError:
+        raise click.FileError(filename=str(excel_path))
     except ColumnMappingError as error:
         raise click.ClickException(str(error))
 
+
+def _render_report(records) -> None:
     if not records:
         click.echo("Nessun dato trovato nel file specificato.")
         return
@@ -98,14 +298,14 @@ def main(
         )
 
 
-def _tuples_to_mapping(items: tuple[tuple[str, str], ...]) -> dict[str, str]:
+def _tuples_to_mapping(items: Iterable[tuple[str, str]]) -> dict[str, str]:
     mapping: dict[str, str] = {}
     for field, column in items:
         mapping[field] = column
     return mapping
 
 
-def _collect_aliases(items: tuple[tuple[str, str], ...]) -> dict[str, list[str]]:
+def _collect_aliases(items: Iterable[tuple[str, str]]) -> dict[str, list[str]]:
     aliases: dict[str, list[str]] = {}
     for field, alias in items:
         aliases.setdefault(field, []).append(alias)

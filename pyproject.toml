@@ -22,6 +22,9 @@ license = {file = "LICENSE"}
 test = [
     "pytest>=8.0"
 ]
+build = [
+    "pyinstaller>=6.10"
+]
 
 [project.scripts]
 trumetrapla = "trumetrapla.cli:main"
