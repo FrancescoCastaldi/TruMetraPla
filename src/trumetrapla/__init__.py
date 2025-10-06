@@ -8,6 +8,7 @@ from .metrics import (
     summarize_operations,
 )
 from .models import OperationRecord
+from .packaging import BuildError, build_windows_executable
 
 __all__ = [
     "OperationRecord",
@@ -16,6 +17,8 @@ __all__ = [
     "group_by_employee",
     "group_by_process",
     "daily_trend",
+    "BuildError",
+    "build_windows_executable",
 ]
 
 __version__ = "0.1.0"

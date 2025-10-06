@@ -14,6 +14,7 @@ from .metrics import (
     group_by_process,
     summarize_operations,
 )
+from .packaging import BuildError, build_windows_executable
 
 WELCOME_BANNER = r"""
 ╔══════════════════════════════════════╗
@@ -88,7 +89,8 @@ def _show_welcome(interactive: bool) -> None:
     click.echo()
     click.echo("Opzioni disponibili:")
     click.echo("  [1] Genera un report da file Excel")
-    click.echo("  [2] Guida alla creazione dell'eseguibile Windows")
+    click.echo("  [2] Crea l'eseguibile Windows (.exe)")
+    click.echo("  [3] Guida alla creazione dell'installer")
     click.echo("  [0] Esci")
 
     if not interactive:
@@ -99,6 +101,8 @@ def _show_welcome(interactive: bool) -> None:
         if choice == 1:
             _interactive_report()
         elif choice == 2:
+            _interactive_build_exe()
+        elif choice == 3:
             _print_installer_help()
         elif choice == 0:
             click.echo("A presto!")
@@ -146,6 +150,29 @@ def _interactive_report() -> None:
     _render_report(records)
 
 
+def _interactive_build_exe() -> None:
+    click.echo()
+    click.echo("=== Generatore eseguibile Windows ===")
+    dist_default = Path("dist")
+    dist_input = click.prompt(
+        "Cartella di destinazione (lascia vuoto per dist/)",
+        default="",
+    ).strip()
+    dist_path = Path(dist_input) if dist_input else dist_default
+    onefile = click.confirm(
+        "Vuoi creare un singolo file TruMetraPla.exe?", default=True
+    )
+
+    try:
+        exe_path = build_windows_executable(dist_path, onefile=onefile)
+    except BuildError as error:
+        click.secho(str(error), fg="red")
+        return
+
+    click.secho(f"Eseguibile generato: {exe_path}", fg="green")
+    click.echo()
+
+
 def _prompt_column_mapping() -> dict[str, str]:
     mapping: dict[str, str] = {}
     choices = click.Choice(_CANONICAL_FIELDS, case_sensitive=False)
@@ -172,19 +199,44 @@ def _prompt_aliases() -> dict[str, list[str]]:
 
 def _print_installer_help() -> None:
     click.echo()
-    click.echo("=== Creazione dell'eseguibile Windows ===")
+    click.echo("=== Guida alla creazione dell'installer Windows (.exe) ===")
+    click.echo("1. Assicurati di aver installato i requisiti: `pip install .[build]`")
     click.echo(
-        "1. Installa i requisiti: `pip install .[build]` su Windows con Python 3.11+"
+        "2. Usa il comando `trumetrapla build-exe` o il menu interattivo per ottenere"
+        " TruMetraPla.exe"
     )
     click.echo(
-        "2. Esegui `pyinstaller trumetrapla.spec` per generare l'eseguibile in `dist/`"
-    )
-    click.echo(
-        "3. (Opzionale) Usa il file `installer/trumetrapla.nsi` con NSIS per creare un"
-        " installer grafico."
+        "3. (Opzionale) Compila `installer/trumetrapla.nsi` con NSIS per generare"
+        " l'installer grafico TruMetraPla_Setup.exe"
     )
     click.echo("Trovi ulteriori dettagli nel README del progetto.")
     click.echo()
+
+
+@main.command("build-exe")
+@click.option(
+    "--dist",
+    "dist_path",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=Path("dist"),
+    show_default=True,
+    help="Percorso della cartella di destinazione",
+)
+@click.option(
+    "--onefile/--no-onefile",
+    default=True,
+    show_default=True,
+    help="Genera un singolo file TruMetraPla.exe",
+)
+def build_exe(dist_path: Path, onefile: bool) -> None:
+    """Costruisce l'eseguibile Windows (.exe) utilizzando PyInstaller."""
+
+    try:
+        exe_path = build_windows_executable(dist_path, onefile=onefile)
+    except BuildError as error:
+        raise click.ClickException(str(error)) from error
+
+    click.secho(f"Eseguibile generato in: {exe_path}", fg="green")
 
 
 def _load_records(
