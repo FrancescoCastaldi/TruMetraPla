@@ -271,11 +271,124 @@ def launch_welcome_window(
 
         messagebox.showinfo("KPI principali", message)
 
+    def _show_pie_chart() -> None:
+        records = state.filtered_records or state.records
+        if not records:
+            messagebox.showinfo(
+                "Nessun dato",
+                "Carica un file Excel e applica eventuali filtri per generare il grafico.",
+            )
+            return
+
+        try:
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            from matplotlib.figure import Figure
+        except ModuleNotFoundError:  # pragma: no cover - dipendenza opzionale
+            messagebox.showerror(
+                "Matplotlib non disponibile",
+                "Installa la dipendenza opzionale 'matplotlib' per visualizzare i grafici.",
+            )
+            return
+        except Exception as exc:  # pragma: no cover - errori imprevisti
+            messagebox.showerror(
+                "Errore grafico",
+                f"Impossibile inizializzare il motore di grafici: {exc}",
+            )
+            return
+
+        chart_window = tk.Toplevel(root)
+        chart_window.title("Report grafico TruMetraPla")
+        chart_window.geometry("720x520")
+        try:
+            chart_window.minsize(560, 420)
+        except Exception:  # pragma: no cover - alcuni stub non implementano minsize
+            pass
+
+        container = ttk.Frame(chart_window, padding=16)
+        container.pack(fill="both", expand=True)
+
+        heading = ttk.Label(
+            container,
+            text="Distribuzione dei pezzi prodotti",
+            font=("Segoe UI", 12, "bold"),
+        )
+        heading.pack(anchor="w")
+
+        options_frame = ttk.Frame(container)
+        options_frame.pack(fill="x", pady=(12, 8))
+
+        ttk.Label(options_frame, text="Raggruppa per:").pack(side="left")
+
+        grouping_combo = ttk.Combobox(
+            options_frame,
+            state="readonly",
+            values=["Processo", "Dipendente"],
+            width=20,
+        )
+        grouping_combo.current(0)
+        grouping_combo.pack(side="left", padx=8)
+
+        figure = Figure(figsize=(5.8, 4.2), dpi=100)
+        axis = figure.add_subplot(111)
+        canvas = FigureCanvasTkAgg(figure, master=container)
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+
+        info_var = tk.StringVar(value="")
+        ttk.Label(container, textvariable=info_var, wraplength=660, justify="center").pack(
+            fill="x", pady=(8, 0)
+        )
+
+        def _refresh_chart(*_args: object) -> None:
+            selected = grouping_combo.get()
+            if selected == "Dipendente":
+                breakdown = group_by_employee(records)
+                title = "Distribuzione pezzi per dipendente"
+            else:
+                breakdown = group_by_process(records)
+                title = "Distribuzione pezzi per processo"
+
+            filtered_breakdown = [
+                item for item in breakdown if item.total_quantity > 0
+            ]
+
+            if not filtered_breakdown:
+                info_var.set(
+                    "Non sono disponibili dati con quantità positive per il grafico selezionato."
+                )
+                axis.clear()
+                canvas.draw_idle()
+                return
+
+            info_var.set("")
+            axis.clear()
+
+            values = [item.total_quantity for item in filtered_breakdown]
+            labels = [item.entity for item in filtered_breakdown]
+            total = sum(values)
+
+            def _format_pct(pct: float) -> str:
+                absolute = int(round(pct * total / 100.0))
+                return f"{pct:.1f}% ({absolute} pezzi)"
+
+            axis.pie(
+                values,
+                labels=labels,
+                autopct=_format_pct,
+                startangle=90,
+            )
+            axis.set_title(title)
+            axis.axis("equal")
+            canvas.draw_idle()
+
+        grouping_combo.bind("<<ComboboxSelected>>", _refresh_chart)
+        _refresh_chart()
+
     file_menu.add_command(label="Apri file Excel…", command=_open_file)
     file_menu.add_separator()
     file_menu.add_command(label="Esci", command=root.destroy)
 
     tools_menu.add_command(label="Mostra KPI filtrati", command=_show_kpi_dialog)
+    tools_menu.add_command(label="Grafico a torta", command=_show_pie_chart)
 
     def _open_docs() -> None:
         import webbrowser
@@ -373,6 +486,9 @@ def launch_welcome_window(
 
     ttk.Button(footer, text="Apri file Excel…", command=_open_file).pack(side="left")
     ttk.Button(footer, text="Mostra KPI", command=_show_kpi_dialog).pack(side="left", padx=8)
+    ttk.Button(footer, text="Grafico a torta", command=_show_pie_chart).pack(
+        side="left", padx=8
+    )
     ttk.Label(footer, textvariable=status_var).pack(side="right")
 
     employee_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
@@ -381,6 +497,7 @@ def launch_welcome_window(
     commands: dict[str, Callable[[], None]] = {
         "open_file": _open_file,
         "show_kpi": _show_kpi_dialog,
+        "show_chart": _show_pie_chart,
         "apply_filters": _apply_filters,
     }
 
