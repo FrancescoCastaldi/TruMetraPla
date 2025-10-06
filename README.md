@@ -7,7 +7,7 @@ TruMetraPla monitora la produttività nei processi metalmeccanici importando dat
 - Import automatico di file Excel con riconoscimento delle intestazioni italiane e inglesi.
 - Calcolo dei principali indicatori: pezzi prodotti, ore lavorate, produttività media.
 - Aggregazioni per dipendente, processo e giorno con ordinamento per produttività.
-- Consolle grafica moderna con menu a tendina, filtri e tabella interattiva per analizzare i file Excel.
+- Consolle grafica moderna con menu a tendina, filtri, tabella interattiva e grafico a torta per analizzare i file Excel.
 - Eseguibile Windows che apre una dashboard desktop con caricamento file guidato e riepiloghi KPI.
 
 ## Installazione
@@ -54,7 +54,7 @@ La schermata principale offre:
 - **Menu File** con la voce *Apri file Excel…* per selezionare il file da importare.
 - **Filtri a tendina** per isolare rapidamente un singolo dipendente o processo produttivo.
 - **Tabella interattiva** con le colonne normalizzate (data, dipendente, processo, pezzi, durata e produttività oraria).
-- **Pulsante "Mostra KPI"** per visualizzare un riepilogo dei principali indicatori e delle top performance.
+- **Pulsanti "Mostra KPI" e "Grafico a torta"** per aprire rispettivamente il riepilogo numerico e la distribuzione visiva dei pezzi prodotti.
 
 Al caricamento viene aggiornato lo stato nella barra inferiore, insieme al riepilogo dei totali (pezzi, ore, throughput e numero di dipendenti/processi). In assenza del runtime grafico Windows, l'applicazione ripiega automaticamente sulla CLI.
 
