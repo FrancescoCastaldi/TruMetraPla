@@ -81,7 +81,7 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 ## Costruire l'eseguibile Windows
 
 1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`.
-2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo oppure affidandoti allo script PowerShell. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo, lo script PowerShell **oppure il nuovo file batch** `installer/Build-TruMetraPla.bat`. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
 3. (Opzionale ma consigliato) Compila l'installer grafico con `trumetrapla build-installer`. Il comando crea `TruMetraPla_Setup_<versione>.exe` pronto per l'utente finale.
 
 ### Creare l'installer automatico
@@ -110,17 +110,21 @@ Se desideri rigenerare da zero anche l'eseguibile (ignorando eventuali build pre
 
 ### Automazione da PowerShell
 
-Per Windows è disponibile lo script `installer/Setup-TruMetraPla.ps1` che:
+Per Windows sono disponibili gli script `installer/Setup-TruMetraPla.ps1` (PowerShell) e `installer/Build-TruMetraPla.bat` (Prompt dei comandi) che:
 
 - crea o aggiorna un ambiente virtuale dedicato;
 - installa il progetto con le dipendenze necessarie alla build;
-- invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
+- invocano `trumetrapla build-exe` con la cartella di destinazione desiderata;
 - opzionalmente compila l'installer grafico NSIS (parametro `-IncludeInstaller`, che usa `trumetrapla build-installer`).
 
 Esempio di utilizzo completo:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1 -IncludeInstaller
+```
+
+```bat
+installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
 ```
 
 ## Utilizzo come libreria Python
