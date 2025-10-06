@@ -41,4 +41,21 @@ def test_welcome_screen_is_printed():
 
     assert result.exit_code == 0
     assert "TruMetraPla Suite" in result.output
-    assert "Guida alla creazione dell'eseguibile" in result.output
+    assert "Crea l'eseguibile Windows (.exe)" in result.output
+
+
+def test_build_exe_command(monkeypatch, tmp_path):
+    expected_path = tmp_path / "TruMetraPla.exe"
+
+    def fake_builder(dist_path, onefile=True):
+        assert dist_path == tmp_path
+        assert onefile is True
+        return expected_path
+
+    runner = CliRunner()
+    monkeypatch.setattr("trumetrapla.cli.build_windows_executable", fake_builder)
+
+    result = runner.invoke(main, ["build-exe", "--dist", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert f"Eseguibile generato in: {expected_path}" in result.output

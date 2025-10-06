@@ -53,7 +53,7 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 ## Costruire l'eseguibile Windows
 
 1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore).
-2. Genera l'eseguibile tramite PyInstaller: `pyinstaller trumetrapla.spec`. Il file `TruMetraPla.exe` sarà disponibile in `dist/TruMetraPla/`.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe` oppure utilizzando il menu interattivo. Verrà creato `TruMetraPla.exe` nella cartella `dist/`.
 3. (Opzionale) Crea un installer grafico con [NSIS](https://nsis.sourceforge.io/). Apri `installer/trumetrapla.nsi`, aggiorna eventuali percorsi/versioni e compila lo script per ottenere `TruMetraPla_Setup_0.1.0.exe`.
 
 ## Utilizzo come libreria Python
