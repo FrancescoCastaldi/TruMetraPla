@@ -697,6 +697,12 @@ def launch_welcome_window(
     )
     ttk.Label(footer, textvariable=status_var).pack(side="right")
 
+    ttk.Label(
+        main_frame,
+        text="Prodotto da Francesco Castaldi",
+        anchor="center",
+    ).pack(fill="x", pady=(8, 0))
+
     employee_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
     process_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
     machine_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
