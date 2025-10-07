@@ -1,6 +1,8 @@
 import pytest
 from datetime import date
 
+import pytest
+
 from trumetrapla.metrics import (
     daily_trend,
     group_by_employee,
@@ -12,9 +14,33 @@ from trumetrapla.models import OperationRecord
 
 def _sample_records():
     return [
-        OperationRecord(date=date(2024, 1, 1), employee="Mario", process="Taglio", quantity=120, duration_minutes=90),
-        OperationRecord(date=date(2024, 1, 1), employee="Luigi", process="Piegatura", quantity=80, duration_minutes=120),
-        OperationRecord(date=date(2024, 1, 2), employee="Mario", process="Saldatura", quantity=60, duration_minutes=60),
+        OperationRecord(
+            date=date(2024, 1, 1),
+            employee="Mario",
+            process="Taglio",
+            machine="Laser 1",
+            process_type="Taglio",
+            quantity=120,
+            duration_minutes=90,
+        ),
+        OperationRecord(
+            date=date(2024, 1, 1),
+            employee="Luigi",
+            process="Piegatura",
+            machine="Pressa 2",
+            process_type="Piegatura",
+            quantity=80,
+            duration_minutes=120,
+        ),
+        OperationRecord(
+            date=date(2024, 1, 2),
+            employee="Mario",
+            process="Saldatura",
+            machine="Robot 4",
+            process_type="Saldatura",
+            quantity=60,
+            duration_minutes=60,
+        ),
     ]
 
 
