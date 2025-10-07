@@ -2,19 +2,36 @@
 
 from __future__ import annotations
 
+import pathlib
 import sys
 from typing import Iterable, Sequence
 
-from .gui import GUIUnavailableError, launch_welcome_window
+
+def _is_running_as_script() -> bool:
+    return __package__ in (None, "")
+
+
+if _is_running_as_script():
+    package_root = pathlib.Path(__file__).resolve().parent.parent
+    if str(package_root) not in sys.path:
+        sys.path.insert(0, str(package_root))
+    from trumetrapla.gui import GUIUnavailableError, launch_welcome_window  # type: ignore
+else:
+    from .gui import GUIUnavailableError, launch_welcome_window
 
 
 def run(argv: Sequence[str] | None = None) -> None:
-    """Avvia l'applicazione grafica o, in fallback, la CLI."""
+    """Avvia l'interfaccia grafica o, se richiesto, la CLI."""
 
     args = list(sys.argv if argv is None else argv)
-    cli_args = [arg for arg in args[1:] if arg != "--cli"]
+    raw_args = list(args[1:])
+    control_flags = {"--cli", "--no-gui", "--gui"}
+    cli_args = [arg for arg in raw_args if arg not in control_flags]
 
-    if "--cli" in args[1:]:
+    wants_cli = any(flag in raw_args for flag in ("--cli", "--no-gui"))
+    has_cli_subcommand = bool(cli_args)
+
+    if wants_cli or has_cli_subcommand:
         _run_cli(cli_args)
         return
 
@@ -25,7 +42,10 @@ def run(argv: Sequence[str] | None = None) -> None:
 
 
 def _run_cli(arguments: Iterable[str]) -> None:
-    from .cli import main as cli_main
+    if _is_running_as_script():
+        from trumetrapla.cli import main as cli_main  # type: ignore
+    else:
+        from .cli import main as cli_main
 
     cli_main.main(args=list(arguments), prog_name="TruMetraPla", standalone_mode=False)
 

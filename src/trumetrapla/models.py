@@ -13,6 +13,8 @@ class OperationRecord:
     date: date
     employee: str
     process: str
+    machine: str
+    process_type: str
     quantity: int
     duration_minutes: float
 

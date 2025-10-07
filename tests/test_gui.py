@@ -227,8 +227,24 @@ class DummyToolkit(dict):
 def test_launch_welcome_window_loads_excel_and_updates_state():
     toolkit = DummyToolkit()
     sample_records = [
-        OperationRecord(date=date(2024, 1, 1), employee="Anna", process="Taglio", quantity=10, duration_minutes=60),
-        OperationRecord(date=date(2024, 1, 2), employee="Luca", process="Assemblaggio", quantity=8, duration_minutes=90),
+        OperationRecord(
+            date=date(2024, 1, 1),
+            employee="Anna",
+            process="Taglio",
+            machine="Laser 1",
+            process_type="Taglio",
+            quantity=10,
+            duration_minutes=60,
+        ),
+        OperationRecord(
+            date=date(2024, 1, 2),
+            employee="Luca",
+            process="Assemblaggio",
+            machine="Linea 3",
+            process_type="Assemblaggio",
+            quantity=8,
+            duration_minutes=90,
+        ),
     ]
 
     loader_calls: dict[str, Path] = {}
