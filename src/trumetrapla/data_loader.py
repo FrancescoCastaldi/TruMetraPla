@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -31,6 +32,30 @@ _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
         "pieces",
     ),
     "duration_minutes": ("durata (min)", "durata", "minuti", "duration", "minutes"),
+}
+
+_FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "date": ("data", "date", "giorno"),
+    "employee": (
+        "operatore",
+        "dipendente",
+        "addetto",
+        "responsabile",
+        "worker",
+        "employee",
+    ),
+    "process": ("processo", "fase", "linea", "operazione", "process"),
+    "machine": (
+        "macchina",
+        "macchinario",
+        "impianto",
+        "postazione",
+        "machine",
+        "equipment",
+    ),
+    "process_type": ("tipo processo", "tipologia", "categoria", "category", "process type"),
+    "quantity": ("quantita", "quantità", "pezzi", "pieces", "quantity", "output"),
+    "duration_minutes": ("durata", "min", "minuti", "minutes", "tempo"),
 }
 
 
@@ -148,10 +173,19 @@ def _resolve_column_name(
     normalized_columns = {
         _normalize_token(column): column for column in available_columns
     }
-    for alias in (aliases or {}).get(field, ()):  # type: ignore[union-attr]
+    alias_candidates = (aliases or {}).get(field, ())  # type: ignore[union-attr]
+    for alias in alias_candidates:
         token = _normalize_token(alias)
         if token in normalized_columns:
             return normalized_columns[token]
+
+    keyword_matches = _FIELD_KEYWORDS.get(field, ())
+    for column in available_columns:
+        normalized = _normalize_token(column)
+        for keyword in keyword_matches:
+            keyword_token = _normalize_token(keyword)
+            if keyword_token and keyword_token in normalized:
+                return column
 
     raise ColumnMappingError(
         (
