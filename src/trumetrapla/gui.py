@@ -8,8 +8,6 @@ from typing import Callable, Dict, Mapping, Protocol
 
 from .data_loader import (
     ColumnMappingError,
-    OPTIONAL_FIELDS,
-    REQUIRED_FIELDS,
     load_operations_from_excel,
     suggest_column_mapping,
 )
@@ -264,8 +262,6 @@ def launch_welcome_window(
             "date": "Data (obbligatoria)",
             "employee": "Dipendente",
             "process": "Processo",
-            "machine": "Macchina (facoltativa)",
-            "process_type": "Tipo processo (facoltativo)",
             "quantity": "Quantità prodotta",
             "duration_minutes": "Durata in minuti",
         }
