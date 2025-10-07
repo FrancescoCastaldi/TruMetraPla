@@ -16,6 +16,20 @@ def test_run_invokes_gui(monkeypatch):
     assert calls == ["gui"]
 
 
+def test_run_invoked_via_python_module(monkeypatch):
+    calls = []
+
+    def fake_gui() -> None:
+        calls.append("gui")
+
+    monkeypatch.setattr(welcome_app, "launch_welcome_window", fake_gui)
+    monkeypatch.setattr(welcome_app, "_run_cli", lambda args: calls.append(["cli", args]))
+
+    welcome_app.run(["python", "-m", "trumetrapla"])
+
+    assert calls == ["gui"]
+
+
 def test_run_falls_back_to_cli(monkeypatch):
     calls = []
 
