@@ -19,6 +19,17 @@ class DummyStringVar:
         return self._value
 
 
+class DummyBooleanVar:
+    def __init__(self, value: bool = False) -> None:
+        self._value = bool(value)
+
+    def set(self, value: bool) -> None:
+        self._value = bool(value)
+
+    def get(self) -> bool:
+        return self._value
+
+
 class DummyMenu:
     def __init__(self, *_args, **_kwargs) -> None:
         self.items: list[tuple[str, tuple]] = []
@@ -90,6 +101,20 @@ class DummyButton(DummyWidget):
     def __init__(self, *args, command=None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.command = command
+
+
+class DummyCheckbutton(DummyWidget):
+    def __init__(self, *args, variable=None, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.variable = variable
+
+
+class DummyLabel(DummyWidget):
+    instances: list["DummyLabel"] = []
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        DummyLabel.instances.append(self)
 
 
 class DummyCombobox(DummyWidget):
@@ -169,6 +194,22 @@ class DummyScrollbar(DummyWidget):
         self.set_calls.append((first, last))
 
 
+class DummyStyle:
+    def __init__(self) -> None:
+        self.theme: str | None = None
+        self.configure_calls: list[tuple[str, dict[str, object]]] = []
+        self.map_calls: list[tuple[str, dict[str, object]]] = []
+
+    def theme_use(self, theme: str) -> None:
+        self.theme = theme
+
+    def configure(self, style_name: str, **kwargs) -> None:
+        self.configure_calls.append((style_name, kwargs))
+
+    def map(self, style_name: str, **kwargs) -> None:
+        self.map_calls.append((style_name, kwargs))
+
+
 class DummyMessagebox:
     def __init__(self) -> None:
         self.info_calls: list[tuple[str, str]] = []
@@ -196,6 +237,7 @@ class DummyTkModule:
         self.instances: list[DummyRoot] = []
         self.Menu = DummyMenu
         self.StringVar = DummyStringVar
+        self.BooleanVar = DummyBooleanVar
 
     def Tk(self) -> DummyRoot:
         root = DummyRoot(self)
@@ -205,16 +247,19 @@ class DummyTkModule:
 
 class DummyToolkit(dict):
     def __init__(self) -> None:
+        DummyLabel.instances = []
         self.tk_module = DummyTkModule()
         self.messagebox = DummyMessagebox()
         self.filedialog = DummyFileDialog()
         self.ttk_module = types.SimpleNamespace(
             Frame=DummyWidget,
-            Label=DummyWidget,
+            Label=DummyLabel,
             Button=DummyButton,
             Combobox=DummyCombobox,
             Treeview=DummyTreeview,
             Scrollbar=DummyScrollbar,
+            Checkbutton=DummyCheckbutton,
+            Style=DummyStyle,
         )
         super().__init__(
             tk=self.tk_module,
@@ -227,8 +272,24 @@ class DummyToolkit(dict):
 def test_launch_welcome_window_loads_excel_and_updates_state():
     toolkit = DummyToolkit()
     sample_records = [
-        OperationRecord(date=date(2024, 1, 1), employee="Anna", process="Taglio", quantity=10, duration_minutes=60),
-        OperationRecord(date=date(2024, 1, 2), employee="Luca", process="Assemblaggio", quantity=8, duration_minutes=90),
+        OperationRecord(
+            date=date(2024, 1, 1),
+            employee="Anna",
+            process="Taglio",
+            machine="Laser 1",
+            process_type="Taglio",
+            quantity=10,
+            duration_minutes=60,
+        ),
+        OperationRecord(
+            date=date(2024, 1, 2),
+            employee="Luca",
+            process="Assemblaggio",
+            machine="Linea 3",
+            process_type="Assemblaggio",
+            quantity=8,
+            duration_minutes=90,
+        ),
     ]
 
     loader_calls: dict[str, Path] = {}
@@ -250,12 +311,55 @@ def test_launch_welcome_window_loads_excel_and_updates_state():
     assert root.title_value == "TruMetraPla - Console Analitica"
     assert root.resizable_value == (True, True)
 
+    assert any(
+        widget.kwargs.get("text") == "Prodotto da Francesco Castaldi"
+        for widget in DummyLabel.instances
+    )
+
     handles.commands["open_file"]()
 
     assert loader_calls["path"] == Path("C:/dati.xlsx")
     assert handles.state.records == sample_records
     assert handles.state.filtered_records == sample_records
     assert toolkit.messagebox.error_calls == []
+
+
+def test_extra_columns_are_registered_and_groupable():
+    toolkit = DummyToolkit()
+    sample_records = [
+        OperationRecord(
+            date=date(2024, 5, 1),
+            employee="Anna",
+            process="Taglio",
+            machine="Laser 2",
+            process_type="Taglio",
+            quantity=20,
+            duration_minutes=45,
+            extra={"Turno": "Notte", "Note": "Urgente"},
+        )
+    ]
+
+    def fake_loader(_: Path) -> list[OperationRecord]:
+        return sample_records
+
+    toolkit.filedialog.return_value = "C:/shift.xlsx"
+
+    handles = launch_welcome_window(
+        run_mainloop=False,
+        operations_loader=fake_loader,
+        _toolkit=toolkit,
+    )
+
+    assert handles is not None
+    handles.commands["open_file"]()
+
+    specs = list(handles.state.column_specs.values())
+    labels = [spec.label for spec in specs]
+    assert "Turno" in labels
+    turno_spec = next(spec for spec in specs if spec.label == "Turno")
+    assert turno_spec.identifier in handles.state.visible_columns
+    assert turno_spec.grouping_key is not None
+    assert turno_spec.grouping_key in handles.state.grouping_accessors
 
 
 def test_launch_welcome_window_requires_valid_toolkit():

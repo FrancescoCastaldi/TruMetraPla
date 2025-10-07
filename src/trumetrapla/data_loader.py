@@ -3,18 +3,35 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+import re
 from pathlib import Path
 
 import pandas as pd
 
 from .models import OperationRecord
 
-_CANONICAL_FIELDS = ("date", "employee", "process", "quantity", "duration_minutes")
+REQUIRED_FIELDS = (
+    "date",
+    "employee",
+    "process",
+    "quantity",
+    "duration_minutes",
+)
+OPTIONAL_FIELDS = ("machine", "process_type")
+_CANONICAL_FIELDS = REQUIRED_FIELDS + OPTIONAL_FIELDS
 
 _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "date": ("data", "date", "giorno"),
     "employee": ("dipendente", "operatore", "employee"),
-    "process": ("processo", "fase", "process"),
+    "process": ("processo", "fase", "linea", "process"),
+    "machine": ("macchina", "impianto", "postazione", "machine", "equipment"),
+    "process_type": (
+        "tipo processo",
+        "tipo di processo",
+        "tipologia",
+        "process type",
+        "categoria processo",
+    ),
     "quantity": (
         "quantità",
         "pezzi",
@@ -25,9 +42,44 @@ _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "duration_minutes": ("durata (min)", "durata", "minuti", "duration", "minutes"),
 }
 
+_FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "date": ("data", "date", "giorno"),
+    "employee": (
+        "operatore",
+        "dipendente",
+        "addetto",
+        "responsabile",
+        "worker",
+        "employee",
+    ),
+    "process": ("processo", "fase", "linea", "operazione", "process"),
+    "machine": (
+        "macchina",
+        "macchinario",
+        "impianto",
+        "postazione",
+        "machine",
+        "equipment",
+    ),
+    "process_type": ("tipo processo", "tipologia", "categoria", "category", "process type"),
+    "quantity": ("quantita", "quantità", "pezzi", "pieces", "quantity", "output"),
+    "duration_minutes": ("durata", "min", "minuti", "minutes", "tempo"),
+}
+
 
 class ColumnMappingError(ValueError):
     """Errore sollevato quando le colonne richieste non sono presenti."""
+
+
+def _coerce_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        text = value.strip()
+        return "" if text.casefold() == "nan" else text
+    if pd.isna(value):  # type: ignore[arg-type]
+        return ""
+    return str(value).strip()
 
 
 def load_operations_from_excel(
@@ -62,25 +114,28 @@ def load_operations_from_excel(
     if data_frame.empty:
         return []
 
-    resolved_columns: dict[str, str] = {}
     available_columns = list(data_frame.columns)
-    extra_aliases = {
-        field: tuple(seq)
-        for field, seq in (aliases or {}).items()
-        if field in _CANONICAL_FIELDS
-    }
+    resolved_columns, missing = suggest_column_mapping(
+        available_columns,
+        column_mapping=column_mapping,
+        aliases=aliases,
+    )
 
-    for field in _CANONICAL_FIELDS:
-        resolved_columns[field] = _resolve_column_name(
-            field,
-            available_columns,
-            column_mapping=column_mapping,
-            aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
+    missing_required = tuple(field for field in missing if field in REQUIRED_FIELDS)
+    if missing_required:
+        missing_fields = ", ".join(missing_required)
+        raise ColumnMappingError(
+            "Impossibile individuare tutte le colonne richieste. "
+            f"Campi mancanti: {missing_fields}."
         )
 
     normalized = data_frame.rename(
         columns={original: field for field, original in resolved_columns.items()}
     )
+
+    for optional_field in OPTIONAL_FIELDS:
+        if optional_field not in normalized.columns:
+            normalized[optional_field] = ""
 
     try:
         normalized["date"] = pd.to_datetime(normalized["date"], errors="raise").dt.date
@@ -103,16 +158,29 @@ def load_operations_from_excel(
     normalized = normalized.dropna(subset=["date", "employee", "process"])
 
     canonical_columns = list(_CANONICAL_FIELDS)
-    records = [
-        OperationRecord(
-            date=row["date"],
-            employee=str(row["employee"]).strip(),
-            process=str(row["process"]).strip(),
-            quantity=int(row["quantity"]),
-            duration_minutes=float(row["duration_minutes"]),
-        )
-        for row in normalized[canonical_columns].to_dict(orient="records")
+    extras_columns = [
+        column for column in normalized.columns if column not in canonical_columns
     ]
+
+    records: list[OperationRecord] = []
+    for row in normalized.to_dict(orient="records"):
+        extras = {
+            column: _coerce_text(row.get(column, ""))
+            for column in extras_columns
+        }
+        records.append(
+            OperationRecord(
+                date=row["date"],
+                employee=_coerce_text(row["employee"]),
+                process=_coerce_text(row["process"]),
+                machine=_coerce_text(row.get("machine", "")),
+                process_type=_coerce_text(row.get("process_type", "")),
+                quantity=int(row["quantity"]),
+                duration_minutes=float(row["duration_minutes"]),
+                extra=extras,
+            )
+        )
+
     return records
 
 
@@ -136,10 +204,19 @@ def _resolve_column_name(
     normalized_columns = {
         _normalize_token(column): column for column in available_columns
     }
-    for alias in (aliases or {}).get(field, ()):  # type: ignore[union-attr]
+    alias_candidates = (aliases or {}).get(field, ())  # type: ignore[union-attr]
+    for alias in alias_candidates:
         token = _normalize_token(alias)
         if token in normalized_columns:
             return normalized_columns[token]
+
+    keyword_matches = _FIELD_KEYWORDS.get(field, ())
+    for column in available_columns:
+        normalized = _normalize_token(column)
+        for keyword in keyword_matches:
+            keyword_token = _normalize_token(keyword)
+            if keyword_token and keyword_token in normalized:
+                return column
 
     raise ColumnMappingError(
         (
@@ -151,4 +228,52 @@ def _resolve_column_name(
 
 
 def _normalize_token(value: str) -> str:
-    return value.strip().casefold()
+    cleaned = re.sub(r"[^0-9a-zàèéìòù\s]+", " ", value, flags=re.IGNORECASE)
+    return " ".join(cleaned.strip().casefold().split())
+
+
+def suggest_column_mapping(
+    columns: Sequence[str],
+    *,
+    column_mapping: Mapping[str, str] | None = None,
+    aliases: Mapping[str, Sequence[str]] | None = None,
+) -> tuple[dict[str, str], tuple[str, ...]]:
+    """Suggerisce la mappatura tra i campi canonici e le colonne disponibili.
+
+    Args:
+        columns: Sequenza di intestazioni disponibili nel file Excel.
+        column_mapping: Mappatura esplicita già fornita dall'utente.
+        aliases: Alias aggiuntivi per il riconoscimento automatico.
+
+    Returns:
+        Una tupla contenente il dizionario di colonne risolte e i campi non
+        assegnati.
+    """
+
+    available_columns = list(columns)
+    extra_aliases = {
+        field: tuple(seq)
+        for field, seq in (aliases or {}).items()
+        if field in _CANONICAL_FIELDS
+    }
+
+    resolved: dict[str, str] = {}
+    missing: list[str] = []
+
+    search_order = list(REQUIRED_FIELDS) + list(OPTIONAL_FIELDS)
+
+    for field in search_order:
+        try:
+            resolved[field] = _resolve_column_name(
+                field,
+                available_columns,
+                column_mapping=column_mapping,
+                aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
+            )
+        except ColumnMappingError:
+            if column_mapping and field in column_mapping:
+                raise
+            if field in REQUIRED_FIELDS:
+                missing.append(field)
+
+    return resolved, tuple(missing)
