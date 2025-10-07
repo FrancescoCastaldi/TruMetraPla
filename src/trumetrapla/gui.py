@@ -10,18 +10,10 @@ from typing import Callable, Dict, Mapping, Protocol
 
 from .data_loader import (
     ColumnMappingError,
-    OPTIONAL_FIELDS,
-    REQUIRED_FIELDS,
     load_operations_from_excel,
     suggest_column_mapping,
 )
-from .metrics import (
-    daily_trend,
-    group_by_attributes,
-    group_by_employee,
-    group_by_process,
-    summarize_operations,
-)
+from .metrics import group_by_employee, group_by_process, summarize_operations
 from .models import OperationRecord
 
 
@@ -174,51 +166,10 @@ def launch_welcome_window(
         except Exception:  # pragma: no cover - tema non disponibile
             pass
 
-        style.configure("Dashboard.TFrame", background="#020617")
-        style.configure(
-            "Card.TFrame",
-            background="#0f172a",
-            relief="ridge",
-            borderwidth=1,
-        )
-        style.configure(
-            "Header.TLabel",
-            font=("Segoe UI", 12, "bold"),
-            foreground="#38bdf8",
-            background="#020617",
-        )
-        style.configure(
-            "Accent.TButton",
-            font=("Segoe UI Semibold", 10),
-            foreground="#f8fafc",
-            background="#2563eb",
-            padding=6,
-        )
-        style.map(
-            "Accent.TButton",
-            background=[("active", "#1d4ed8"), ("pressed", "#1e40af")],
-            foreground=[("disabled", "#94a3b8")],
-        )
-        style.configure("TLabel", background="#020617", foreground="#e2e8f0")
-        style.configure("Info.TLabel", background="#0f172a", foreground="#94a3b8")
-        style.configure(
-            "Tech.Treeview",
-            background="#020617",
-            fieldbackground="#020617",
-            foreground="#e2e8f0",
-            rowheight=24,
-        )
-        style.map(
-            "Tech.Treeview",
-            background=[("selected", "#1d4ed8")],
-            foreground=[("selected", "#f8fafc")],
-        )
-        style.configure(
-            "Treeview.Heading",
-            background="#1e293b",
-            foreground="#38bdf8",
-            font=("Segoe UI Semibold", 10),
-        )
+        style.configure("Dashboard.TFrame", background="#f4f5f7")
+        style.configure("Card.TFrame", background="#ffffff", relief="ridge")
+        style.configure("Header.TLabel", font=("Segoe UI", 12, "bold"))
+        style.configure("Accent.TButton", font=("Segoe UI Semibold", 10))
 
     state = _AppState()
     loader = operations_loader or (lambda path: load_operations_from_excel(path))
@@ -384,18 +335,20 @@ def launch_welcome_window(
         tree.delete(*tree.get_children())
         columns = _active_columns()
         for record in records:
-            values = []
-            for column_id in columns:
-                spec = state.column_specs.get(column_id)
-                if not spec:
-                    values.append("")
-                    continue
-                try:
-                    value = spec.getter(record)
-                except Exception:  # pragma: no cover - getter personalizzato errato
-                    value = ""
-                values.append(value)
-            tree.insert("", "end", values=tuple(values))
+            tree.insert(
+                "",
+                "end",
+                values=(
+                    record.date.strftime("%d/%m/%Y"),
+                    record.employee,
+                    record.process,
+                    record.process_type or "-",
+                    record.machine or "-",
+                    f"{record.quantity}",
+                    f"{record.duration_minutes:.1f}",
+                    f"{record.productivity_per_hour:.2f}",
+                ),
+            )
 
     def _format_summary(records: list[OperationRecord]) -> str:
         if not records:
@@ -508,8 +461,6 @@ def launch_welcome_window(
             "date": "Data (obbligatoria)",
             "employee": "Dipendente",
             "process": "Processo",
-            "machine": "Macchina (facoltativa)",
-            "process_type": "Tipo processo (facoltativo)",
             "quantity": "Quantità prodotta",
             "duration_minutes": "Durata in minuti",
         }
@@ -781,7 +732,7 @@ def launch_welcome_window(
 
         messagebox.showinfo("KPI principali", message)
 
-    def _show_chart_dialog() -> None:
+    def _show_pie_chart() -> None:
         records = state.filtered_records or state.records
         if not records:
             messagebox.showinfo(
@@ -791,10 +742,8 @@ def launch_welcome_window(
             return
 
         try:
-            from matplotlib import cm
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
             from matplotlib.figure import Figure
-            from matplotlib.patches import Circle
         except ModuleNotFoundError:  # pragma: no cover - dipendenza opzionale
             messagebox.showerror(
                 "Matplotlib non disponibile",
@@ -810,181 +759,55 @@ def launch_welcome_window(
 
         chart_window = tk.Toplevel(root)
         chart_window.title("Report grafico TruMetraPla")
-        chart_window.geometry("820x580")
+        chart_window.geometry("720x520")
         try:
-            chart_window.minsize(640, 480)
+            chart_window.minsize(560, 420)
         except Exception:  # pragma: no cover - alcuni stub non implementano minsize
             pass
 
-        container = ttk.Frame(chart_window, padding=20, style="Card.TFrame")
+        container = ttk.Frame(chart_window, padding=16)
         container.pack(fill="both", expand=True)
 
         heading = ttk.Label(
             container,
             text="Distribuzione dei pezzi prodotti",
-            style="Header.TLabel",
+            font=("Segoe UI", 12, "bold"),
         )
         heading.pack(anchor="w")
 
-        options_frame = ttk.Frame(container, style="Card.TFrame")
+        options_frame = ttk.Frame(container)
         options_frame.pack(fill="x", pady=(12, 8))
-
-        ttk.Label(options_frame, text="Tipo grafico:").pack(side="left")
-
-        chart_type_combo = ttk.Combobox(
-            options_frame,
-            state="readonly",
-            values=[
-                "Grafico a torta",
-                "Grafico ad anello",
-                "Barre orizzontali",
-                "Colonne verticali",
-                "Trend giornaliero",
-            ],
-            width=24,
-        )
-        chart_type_combo.current(0)
-        chart_type_combo.pack(side="left", padx=(6, 14))
 
         ttk.Label(options_frame, text="Raggruppa per:").pack(side="left")
 
-        grouping_options: list[tuple[str, str]] = []
-        display_names: dict[str, str] = {}
-        accessors = dict(state.grouping_accessors)
-
-        for spec in state.column_specs.values():
-            if not spec.grouping_key:
-                continue
-            label = spec.label
-            key = spec.grouping_key
-            if key in display_names:
-                continue
-            display_names[key] = label
-            grouping_options.append((label, key))
-            if key.startswith("extra:") and key not in accessors:
-                field = spec.source or label
-                accessors[key] = (
-                    lambda record, field=field: record.extra.get(field, "")
-                )
-
-        if not grouping_options:
-            grouping_options = [("Processo", "process")]
-            display_names = {"process": "Processo"}
-
-        grouping_labels = [label for label, _ in grouping_options]
-        grouping_map = {label: attr for label, attr in grouping_options}
-
-        primary_combo = ttk.Combobox(
+        grouping_combo = ttk.Combobox(
             options_frame,
             state="readonly",
-            values=grouping_labels,
-            width=18,
+            values=["Processo", "Dipendente"],
+            width=20,
         )
-        primary_combo.current(0)
-        primary_combo.pack(side="left", padx=6)
-
-        secondary_combo = ttk.Combobox(
-            options_frame,
-            state="readonly",
-            values=["Nessuno"] + grouping_labels,
-            width=18,
-        )
-        secondary_combo.current(0)
-        secondary_combo.pack(side="left", padx=6)
-
-        tertiary_combo = ttk.Combobox(
-            options_frame,
-            state="readonly",
-            values=["Nessuno"] + grouping_labels,
-            width=18,
-        )
-        tertiary_combo.current(0)
-        tertiary_combo.pack(side="left", padx=6)
+        grouping_combo.current(0)
+        grouping_combo.pack(side="left", padx=8)
 
         figure = Figure(figsize=(5.8, 4.2), dpi=100)
-        figure.patch.set_facecolor("#020617")
         axis = figure.add_subplot(111)
-        axis.set_facecolor("#0b1120")
         canvas = FigureCanvasTkAgg(figure, master=container)
-        canvas_widget = canvas.get_tk_widget()
-        canvas_widget.configure(background="#020617", highlightthickness=0)
-        canvas_widget.pack(fill="both", expand=True)
+        canvas.get_tk_widget().pack(fill="both", expand=True)
 
         info_var = tk.StringVar(value="")
-        ttk.Label(
-            container,
-            textvariable=info_var,
-            wraplength=740,
-            justify="center",
-            style="Info.TLabel",
-        ).pack(fill="x", pady=(8, 0))
-
-        display_names_map = display_names
-
-        def _selected_fields() -> tuple[list[str], list[str]]:
-            duplicates: list[str] = []
-            seen: set[str] = set()
-            result: list[str] = []
-            for combo in (primary_combo, secondary_combo, tertiary_combo):
-                value = combo.get()
-                attr = grouping_map.get(value)
-                if attr is None:
-                    continue
-                if attr in seen:
-                    duplicates.append(value)
-                    continue
-                seen.add(attr)
-                result.append(attr)
-            return result, duplicates
+        ttk.Label(container, textvariable=info_var, wraplength=660, justify="center").pack(
+            fill="x", pady=(8, 0)
+        )
 
         def _refresh_chart(*_args: object) -> None:
-            chosen_fields, duplicates = _selected_fields()
-            chart_type = chart_type_combo.get()
+            selected = grouping_combo.get()
+            if selected == "Dipendente":
+                breakdown = group_by_employee(records)
+                title = "Distribuzione pezzi per dipendente"
+            else:
+                breakdown = group_by_process(records)
+                title = "Distribuzione pezzi per processo"
 
-            axis.clear()
-            axis.set_facecolor("#0b1120")
-            axis.tick_params(colors="#94a3b8")
-            for spine in axis.spines.values():
-                spine.set_color("#1e293b")
-
-            if chart_type == "Trend giornaliero":
-                trend = daily_trend(records)
-                if not trend:
-                    info_var.set(
-                        "Nessun dato disponibile per mostrare l'andamento giornaliero."
-                    )
-                    canvas.draw_idle()
-                    return
-
-                info_var.set("Andamento delle quantità prodotte per giorno.")
-                dates = [item.date for item in trend]
-                totals = [item.total_quantity for item in trend]
-                axis.plot_date(
-                    dates,
-                    totals,
-                    linestyle="-",
-                    marker="o",
-                    color="#38bdf8",
-                )
-                axis.set_title(
-                    "Trend giornaliero dei pezzi prodotti",
-                    color="#38bdf8",
-                )
-                axis.set_ylabel("Pezzi prodotti", color="#94a3b8")
-                axis.grid(color="#1e293b", alpha=0.4)
-                figure.autofmt_xdate()
-                canvas.draw_idle()
-                return
-
-            if not chosen_fields:
-                chosen_fields = [grouping_options[0][1]]
-
-            breakdown = group_by_attributes(
-                records,
-                chosen_fields,
-                display_names=display_names_map,
-                accessors=accessors,
-            )
             filtered_breakdown = [
                 item for item in breakdown if item.total_quantity > 0
             ]
@@ -993,91 +816,32 @@ def launch_welcome_window(
                 info_var.set(
                     "Non sono disponibili dati con quantità positive per il grafico selezionato."
                 )
+                axis.clear()
                 canvas.draw_idle()
                 return
 
-            if duplicates:
-                info_var.set(
-                    "Campi duplicati rimossi dal raggruppamento: "
-                    + ", ".join(dict.fromkeys(duplicates))
-                )
-            else:
-                combo_description = " → ".join(
-                    display_names_map[field] for field in chosen_fields
-                )
-                info_var.set(
-                    f"Raggruppamento attivo: {combo_description}."
-                )
+            info_var.set("")
+            axis.clear()
 
             values = [item.total_quantity for item in filtered_breakdown]
             labels = [item.entity for item in filtered_breakdown]
-            palette = cm.get_cmap("viridis", len(values) or 1)
-            colors = [palette(index) for index in range(len(values) or 1)]
+            total = sum(values)
 
-            if chart_type == "Barre orizzontali":
-                axis.barh(range(len(labels)), values, color=colors)
-                axis.set_yticks(range(len(labels)))
-                axis.set_yticklabels(labels)
-                axis.invert_yaxis()
-                axis.set_xlabel("Pezzi prodotti", color="#94a3b8")
-                axis.set_title("Distribuzione per raggruppamento", color="#38bdf8")
-                for index, value in enumerate(values):
-                    axis.text(
-                        value + max(values) * 0.01,
-                        index,
-                        str(value),
-                        va="center",
-                        color="#f8fafc",
-                    )
-            elif chart_type == "Colonne verticali":
-                axis.bar(range(len(labels)), values, color=colors)
-                axis.set_xticks(range(len(labels)))
-                axis.set_xticklabels(labels, rotation=15, ha="right")
-                axis.set_ylabel("Pezzi prodotti", color="#94a3b8")
-                axis.set_title("Distribuzione per raggruppamento", color="#38bdf8")
-                for index, value in enumerate(values):
-                    axis.text(
-                        index,
-                        value,
-                        str(value),
-                        ha="center",
-                        va="bottom",
-                        color="#f8fafc",
-                    )
-            else:
-                total = sum(values)
+            def _format_pct(pct: float) -> str:
+                absolute = int(round(pct * total / 100.0))
+                return f"{pct:.1f}% ({absolute} pezzi)"
 
-                def _format_pct(pct: float) -> str:
-                    absolute = int(round(pct * total / 100.0))
-                    return f"{pct:.1f}% ({absolute} pezzi)"
-
-                textprops = {"color": "#0b1120", "fontsize": 10}
-                wedges, texts, autotexts = axis.pie(
-                    values,
-                    labels=labels,
-                    autopct=_format_pct,
-                    startangle=90,
-                    colors=colors,
-                    textprops=textprops,
-                )
-                if chart_type == "Grafico ad anello":
-                    for wedge in wedges:
-                        wedge.set_width(0.45)
-                        wedge.set_edgecolor("#020617")
-                    axis.add_artist(Circle((0, 0), 0.30, color="#020617"))
-                axis.set_title("Distribuzione dei pezzi prodotti", color="#38bdf8")
-                axis.axis("equal")
-
+            axis.pie(
+                values,
+                labels=labels,
+                autopct=_format_pct,
+                startangle=90,
+            )
+            axis.set_title(title)
+            axis.axis("equal")
             canvas.draw_idle()
 
-        for widget in (
-            chart_type_combo,
-            primary_combo,
-            secondary_combo,
-            tertiary_combo,
-        ):
-            widget.bind("<<ComboboxSelected>>", _refresh_chart)
-
+        grouping_combo.bind("<<ComboboxSelected>>", _refresh_chart)
         _refresh_chart()
 
     file_menu.add_command(label="Apri file Excel…", command=_open_file)
@@ -1085,10 +849,7 @@ def launch_welcome_window(
     file_menu.add_command(label="Esci", command=root.destroy)
 
     tools_menu.add_command(label="Mostra KPI filtrati", command=_show_kpi_dialog)
-    tools_menu.add_command(
-        label="Gestisci colonne tabella", command=_open_column_manager
-    )
-    tools_menu.add_command(label="Dashboard grafica", command=_show_chart_dialog)
+    tools_menu.add_command(label="Grafico a torta", command=_show_pie_chart)
 
     def _open_docs() -> None:
         import webbrowser
@@ -1178,6 +939,16 @@ def launch_welcome_window(
     table_frame = ttk.Frame(main_frame, padding=12, style="Card.TFrame")
     table_frame.pack(fill="both", expand=True)
 
+    columns = (
+        "date",
+        "employee",
+        "process",
+        "process_type",
+        "machine",
+        "quantity",
+        "duration",
+        "throughput",
+    )
     tree = ttk.Treeview(
         table_frame,
         columns=tuple(state.visible_columns),
@@ -1185,7 +956,27 @@ def launch_welcome_window(
         height=15,
         style="Tech.Treeview",
     )
-    _configure_tree_columns()
+
+    headings = {
+        "date": "Data",
+        "employee": "Dipendente",
+        "process": "Processo",
+        "process_type": "Tipo processo",
+        "machine": "Macchina",
+        "quantity": "Pezzi",
+        "duration": "Durata (min)",
+        "throughput": "Pezzi/ora",
+    }
+
+    for column in columns:
+        tree.heading(column, text=headings[column])
+        anchor = "center"
+        if column in {"employee", "process", "process_type", "machine"}:
+            anchor = "w"
+        width = 140
+        if column in {"quantity", "duration", "throughput"}:
+            width = 110
+        tree.column(column, anchor=anchor, width=width)
 
     vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
     hsb = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
@@ -1198,30 +989,11 @@ def launch_welcome_window(
     footer = ttk.Frame(main_frame, style="Dashboard.TFrame")
     footer.pack(fill="x", pady=(12, 0))
 
-    ttk.Button(
-        footer,
-        text="Apri file Excel…",
-        command=_open_file,
-        style="Accent.TButton",
-    ).pack(side="left")
-    ttk.Button(
-        footer,
-        text="Mostra KPI",
-        command=_show_kpi_dialog,
-        style="Accent.TButton",
-    ).pack(side="left", padx=8)
-    ttk.Button(
-        footer,
-        text="Configura colonne",
-        command=_open_column_manager,
-        style="Accent.TButton",
-    ).pack(side="left", padx=8)
-    ttk.Button(
-        footer,
-        text="Apri dashboard grafica",
-        command=_show_chart_dialog,
-        style="Accent.TButton",
-    ).pack(side="left", padx=8)
+    ttk.Button(footer, text="Apri file Excel…", command=_open_file).pack(side="left")
+    ttk.Button(footer, text="Mostra KPI", command=_show_kpi_dialog).pack(side="left", padx=8)
+    ttk.Button(footer, text="Grafico a torta", command=_show_pie_chart).pack(
+        side="left", padx=8
+    )
     ttk.Label(footer, textvariable=status_var).pack(side="right")
 
     ttk.Label(
@@ -1238,7 +1010,7 @@ def launch_welcome_window(
     commands: dict[str, Callable[[], None]] = {
         "open_file": _open_file,
         "show_kpi": _show_kpi_dialog,
-        "show_chart": _show_chart_dialog,
+        "show_chart": _show_pie_chart,
         "apply_filters": _apply_filters,
     }
 

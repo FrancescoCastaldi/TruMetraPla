@@ -25,11 +25,10 @@ def run(argv: Sequence[str] | None = None) -> None:
 
     args = list(sys.argv if argv is None else argv)
     raw_args = list(args[1:])
-    cleaned_args = _strip_module_invocation_tokens(raw_args)
     control_flags = {"--cli", "--no-gui", "--gui"}
-    cli_args = [arg for arg in cleaned_args if arg not in control_flags]
+    cli_args = [arg for arg in raw_args if arg not in control_flags]
 
-    wants_cli = any(flag in cleaned_args for flag in ("--cli", "--no-gui"))
+    wants_cli = any(flag in raw_args for flag in ("--cli", "--no-gui"))
     has_cli_subcommand = bool(cli_args)
 
     if wants_cli or has_cli_subcommand:
