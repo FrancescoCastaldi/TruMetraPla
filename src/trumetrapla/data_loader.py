@@ -23,14 +23,6 @@ _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "date": ("data", "date", "giorno"),
     "employee": ("dipendente", "operatore", "employee"),
     "process": ("processo", "fase", "linea", "process"),
-    "machine": ("macchina", "impianto", "postazione", "machine", "equipment"),
-    "process_type": (
-        "tipo processo",
-        "tipo di processo",
-        "tipologia",
-        "process type",
-        "categoria processo",
-    ),
     "quantity": (
         "quantità",
         "pezzi",
@@ -174,17 +166,6 @@ def _normalize_token(value: str) -> str:
     return value.strip().casefold()
 
 
-def _coerce_text(value: object) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        text = value.strip()
-        return "" if text.casefold() == "nan" else text
-    if pd.isna(value):  # type: ignore[arg-type]
-        return ""
-    return str(value).strip()
-
-
 def suggest_column_mapping(
     columns: Sequence[str],
     *,
@@ -213,9 +194,7 @@ def suggest_column_mapping(
     resolved: dict[str, str] = {}
     missing: list[str] = []
 
-    search_order = list(REQUIRED_FIELDS) + list(OPTIONAL_FIELDS)
-
-    for field in search_order:
+    for field in _CANONICAL_FIELDS:
         try:
             resolved[field] = _resolve_column_name(
                 field,
@@ -224,9 +203,6 @@ def suggest_column_mapping(
                 aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
             )
         except ColumnMappingError:
-            if column_mapping and field in column_mapping:
-                raise
-            if field in REQUIRED_FIELDS:
-                missing.append(field)
+            missing.append(field)
 
     return resolved, tuple(missing)

@@ -107,15 +107,7 @@ def test_missing_column_raises_error(tmp_path):
 
 
 def test_suggest_column_mapping_returns_resolved_headers():
-    columns = [
-        "Data",
-        "Operatore",
-        "Linea",
-        "Macchina",
-        "Tipo processo",
-        "Pezzi prodotti",
-        "Durata (min)",
-    ]
+    columns = ["Data", "Operatore", "Linea", "Pezzi prodotti", "Durata (min)"]
 
     resolved, missing = suggest_column_mapping(columns)
 
@@ -123,29 +115,5 @@ def test_suggest_column_mapping_returns_resolved_headers():
     assert resolved["date"] == "Data"
     assert resolved["employee"] == "Operatore"
     assert resolved["process"] == "Linea"
-    assert resolved["machine"] == "Macchina"
-    assert resolved["process_type"] == "Tipo processo"
     assert resolved["quantity"] == "Pezzi prodotti"
     assert resolved["duration_minutes"] == "Durata (min)"
-
-
-def test_optional_columns_are_not_mandatory(tmp_path):
-    frame = pd.DataFrame(
-        [
-            {
-                "Data": "2024-03-01",
-                "Dipendente": "Chiara Neri",
-                "Processo": "Lucidatura",
-                "Quantità": 30,
-                "Durata (min)": 50,
-            }
-        ]
-    )
-    excel_path = tmp_path / "no_optional.xlsx"
-    frame.to_excel(excel_path, index=False)
-
-    records = load_operations_from_excel(excel_path)
-
-    assert len(records) == 1
-    assert records[0].machine == ""
-    assert records[0].process_type == ""
