@@ -79,7 +79,6 @@ def group_by_attributes(
     attributes: Sequence[str],
     *,
     display_names: Mapping[str, str] | None = None,
-    accessors: Mapping[str, Callable[[OperationRecord], object]] | None = None,
 ) -> list[EntityPerformance]:
     """Aggrega i KPI combinando più attributi dell'operazione.
 
@@ -100,9 +99,6 @@ def group_by_attributes(
 
     getters = []
     for name in attributes:
-        if accessors and name in accessors:
-            getters.append(accessors[name])
-            continue
         try:
             getters.append(attrgetter(name))
         except AttributeError as exc:  # pragma: no cover - errori di programmazione

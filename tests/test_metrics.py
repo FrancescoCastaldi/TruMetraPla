@@ -1,6 +1,8 @@
 import pytest
 from datetime import date
 
+import pytest
+
 from trumetrapla.metrics import (
     daily_trend,
     group_by_attributes,
@@ -88,39 +90,3 @@ def test_group_by_multiple_attributes():
     assert performances[0].entity == "Processo: Taglio • Macchina: Laser 1"
     assert performances[0].total_quantity == 120
     assert all(" • " in item.entity for item in performances)
-
-
-def test_group_by_attributes_with_extra_field():
-    records = [
-        OperationRecord(
-            date=date(2024, 6, 1),
-            employee="Mario",
-            process="Taglio",
-            machine="Laser 1",
-            process_type="Taglio",
-            quantity=40,
-            duration_minutes=30,
-            extra={"Turno": "Notte"},
-        ),
-        OperationRecord(
-            date=date(2024, 6, 1),
-            employee="Luigi",
-            process="Taglio",
-            machine="Laser 1",
-            process_type="Taglio",
-            quantity=35,
-            duration_minutes=40,
-            extra={"Turno": "Giorno"},
-        ),
-    ]
-
-    performances = group_by_attributes(
-        records,
-        ("extra:Turno",),
-        display_names={"extra:Turno": "Turno"},
-        accessors={"extra:Turno": lambda record: record.extra.get("Turno", "")},
-    )
-
-    assert {item.entity for item in performances} == {"Turno: Notte", "Turno: Giorno"}
-    notte = next(item for item in performances if item.entity == "Turno: Notte")
-    assert notte.total_quantity == 40

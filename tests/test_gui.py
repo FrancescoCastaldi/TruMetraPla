@@ -103,12 +103,6 @@ class DummyButton(DummyWidget):
         self.command = command
 
 
-class DummyCheckbutton(DummyWidget):
-    def __init__(self, *args, variable=None, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.variable = variable
-
-
 class DummyLabel(DummyWidget):
     instances: list["DummyLabel"] = []
 
@@ -198,16 +192,12 @@ class DummyStyle:
     def __init__(self) -> None:
         self.theme: str | None = None
         self.configure_calls: list[tuple[str, dict[str, object]]] = []
-        self.map_calls: list[tuple[str, dict[str, object]]] = []
 
     def theme_use(self, theme: str) -> None:
         self.theme = theme
 
     def configure(self, style_name: str, **kwargs) -> None:
         self.configure_calls.append((style_name, kwargs))
-
-    def map(self, style_name: str, **kwargs) -> None:
-        self.map_calls.append((style_name, kwargs))
 
 
 class DummyMessagebox:
@@ -258,7 +248,6 @@ class DummyToolkit(dict):
             Combobox=DummyCombobox,
             Treeview=DummyTreeview,
             Scrollbar=DummyScrollbar,
-            Checkbutton=DummyCheckbutton,
             Style=DummyStyle,
         )
         super().__init__(

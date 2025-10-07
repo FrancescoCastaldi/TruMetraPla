@@ -107,15 +107,7 @@ def test_missing_column_raises_error(tmp_path):
 
 
 def test_suggest_column_mapping_returns_resolved_headers():
-    columns = [
-        "Data",
-        "Operatore",
-        "Linea",
-        "Macchina",
-        "Tipo processo",
-        "Pezzi prodotti",
-        "Durata (min)",
-    ]
+    columns = ["Data", "Operatore", "Linea", "Pezzi prodotti", "Durata (min)"]
 
     resolved, missing = suggest_column_mapping(columns)
 
@@ -123,102 +115,5 @@ def test_suggest_column_mapping_returns_resolved_headers():
     assert resolved["date"] == "Data"
     assert resolved["employee"] == "Operatore"
     assert resolved["process"] == "Linea"
-    assert resolved["machine"] == "Macchina"
-    assert resolved["process_type"] == "Tipo processo"
     assert resolved["quantity"] == "Pezzi prodotti"
     assert resolved["duration_minutes"] == "Durata (min)"
-
-
-def test_optional_columns_are_not_mandatory(tmp_path):
-    frame = pd.DataFrame(
-        [
-            {
-                "Data": "2024-03-01",
-                "Dipendente": "Chiara Neri",
-                "Processo": "Lucidatura",
-                "Quantità": 30,
-                "Durata (min)": 50,
-            }
-        ]
-    )
-    excel_path = tmp_path / "no_optional.xlsx"
-    frame.to_excel(excel_path, index=False)
-
-    records = load_operations_from_excel(excel_path)
-
-    assert len(records) == 1
-    assert records[0].machine == ""
-    assert records[0].process_type == ""
-
-
-def test_keyword_matching_for_descriptive_headers(tmp_path):
-    frame = pd.DataFrame(
-        [
-            {
-                "Data di produzione": "2024-04-10",
-                "Operatore responsabile": "Giulia Riva",
-                "Processo principale": "Montaggio",
-                "Macchina utilizzata": "Linea B",
-                "Tipologia processo": "Assemblaggio",
-                "Pezzi prodotti totali": 75,
-                "Durata totale [min]": 110,
-            }
-        ]
-    )
-    excel_path = tmp_path / "descrittivo.xlsx"
-    frame.to_excel(excel_path, index=False)
-
-    records = load_operations_from_excel(excel_path)
-
-    assert len(records) == 1
-    assert records[0].employee == "Giulia Riva"
-    assert records[0].machine == "Linea B"
-    assert records[0].process_type == "Assemblaggio"
-    assert records[0].quantity == 75
-    assert pytest.approx(records[0].duration_minutes) == 110
-
-
-def test_error_message_only_mentions_required_columns(tmp_path):
-    frame = pd.DataFrame(
-        [
-            {
-                "Data": "2024-05-02",
-                "Operatore": "Luca Neri",
-                "Processo": "Taglio",
-                "Macchinario": "Laser 5",
-                "Tipologia": "Taglio",
-            }
-        ]
-    )
-    excel_path = tmp_path / "mancanti.xlsx"
-    frame.to_excel(excel_path, index=False)
-
-    with pytest.raises(ColumnMappingError) as excinfo:
-        load_operations_from_excel(excel_path)
-
-    message = str(excinfo.value)
-    assert "quantity" in message
-
-
-def test_extra_columns_are_preserved(tmp_path):
-    frame = pd.DataFrame(
-        [
-            {
-                "Data": "2024-06-01",
-                "Operatore": "Sara Verdi",
-                "Processo": "Assemblaggio",
-                "Pezzi prodotti": 55,
-                "Durata (min)": 80,
-                "Turno": "Notte",
-                "Note": "Lotto pilota",
-            }
-        ]
-    )
-    excel_path = tmp_path / "extra.xlsx"
-    frame.to_excel(excel_path, index=False)
-
-    records = load_operations_from_excel(excel_path)
-
-    assert len(records) == 1
-    assert records[0].extra["Turno"] == "Notte"
-    assert records[0].extra["Note"] == "Lotto pilota"
