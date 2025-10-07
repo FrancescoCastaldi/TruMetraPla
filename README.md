@@ -1,8 +1,11 @@
 # TruMetraPla
 
-TruMetraPla monitora la produttività nei processi metalmeccanici importando dati da file Excel e offrendo strumenti per analizzare KPI, grafici e performance di dipendenti e processi.
+Strumento desktop e CLI per analizzare dati di produzione da Excel, calcolare KPI e distribuire rapidamente report o eseguibili Windows.
 
-## Funzionalità principali
+## Utilizzo rapido
+- **Installazione**: `pip install -e .[test]`
+- **Dashboard**: `trumetrapla` (oppure avvia `dist/TruMetraPla.exe` dopo il build)
+- **Report CLI**: `trumetrapla report produzione.xlsx`
 
 - Import automatico di file Excel con riconoscimento delle intestazioni italiane e inglesi.
 - Calcolo dei principali indicatori: pezzi prodotti, ore lavorate, produttività media.
@@ -10,7 +13,9 @@ TruMetraPla monitora la produttività nei processi metalmeccanici importando dat
 - Consolle grafica moderna con menu a tendina, filtri, tabella interattiva e grafico a torta per analizzare i file Excel.
 - Eseguibile Windows che apre una dashboard desktop con caricamento file guidato e riepiloghi KPI.
 
-## Installazione
+## Dashboard
+- Filtri per operatore/processo e tabella con KPI.
+- Finestra grafica con report a torta basati su processo o operatore.
 
 Il progetto utilizza Python 3.11+. Per installare le dipendenze in modalità sviluppo è sufficiente eseguire:
 
