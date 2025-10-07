@@ -24,14 +24,6 @@ _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "date": ("data", "date", "giorno"),
     "employee": ("dipendente", "operatore", "employee"),
     "process": ("processo", "fase", "linea", "process"),
-    "machine": ("macchina", "impianto", "postazione", "machine", "equipment"),
-    "process_type": (
-        "tipo processo",
-        "tipo di processo",
-        "tipologia",
-        "process type",
-        "categoria processo",
-    ),
     "quantity": (
         "quantità",
         "pezzi",
@@ -110,9 +102,8 @@ def load_operations_from_excel(
         aliases=aliases,
     )
 
-    missing_required = tuple(field for field in missing if field in REQUIRED_FIELDS)
-    if missing_required:
-        missing_fields = ", ".join(missing_required)
+    if missing:
+        missing_fields = ", ".join(missing)
         raise ColumnMappingError(
             "Impossibile individuare tutte le colonne richieste. "
             f"Campi mancanti: {missing_fields}."
@@ -206,19 +197,7 @@ def _resolve_column_name(
 
 
 def _normalize_token(value: str) -> str:
-    cleaned = re.sub(r"[^0-9a-zàèéìòù\s]+", " ", value, flags=re.IGNORECASE)
-    return " ".join(cleaned.strip().casefold().split())
-
-
-def _coerce_text(value: object) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        text = value.strip()
-        return "" if text.casefold() == "nan" else text
-    if pd.isna(value):  # type: ignore[arg-type]
-        return ""
-    return str(value).strip()
+    return value.strip().casefold()
 
 
 def suggest_column_mapping(
@@ -249,9 +228,7 @@ def suggest_column_mapping(
     resolved: dict[str, str] = {}
     missing: list[str] = []
 
-    search_order = list(REQUIRED_FIELDS) + list(OPTIONAL_FIELDS)
-
-    for field in search_order:
+    for field in _CANONICAL_FIELDS:
         try:
             resolved[field] = _resolve_column_name(
                 field,
@@ -260,9 +237,6 @@ def suggest_column_mapping(
                 aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
             )
         except ColumnMappingError:
-            if column_mapping and field in column_mapping:
-                raise
-            if field in REQUIRED_FIELDS:
-                missing.append(field)
+            missing.append(field)
 
     return resolved, tuple(missing)
