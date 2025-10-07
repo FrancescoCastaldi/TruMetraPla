@@ -6,7 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, Mapping, Protocol
 
-from .data_loader import ColumnMappingError, load_operations_from_excel
+from .data_loader import (
+    ColumnMappingError,
+    load_operations_from_excel,
+    suggest_column_mapping,
+)
 from .metrics import group_by_employee, group_by_process, summarize_operations
 from .models import OperationRecord
 
@@ -198,6 +202,135 @@ def launch_welcome_window(
         process_combo.current(0)
         state.filtered_records = records
 
+    def _prompt_column_mapping(excel_path: Path) -> dict[str, str] | None:
+        try:
+            import pandas as pd
+        except ModuleNotFoundError as exc:  # pragma: no cover - dipendenza obbligatoria
+            messagebox.showerror(
+                "Pandas non disponibile",
+                "Installa la dipendenza 'pandas' per importare file Excel.",
+            )
+            raise GUIUnavailableError("Pandas richiesto per la gestione dei file Excel") from exc
+
+        try:
+            preview = pd.read_excel(excel_path, sheet_name=0, nrows=0)
+        except Exception as exc:  # pragma: no cover - errori di I/O imprevisti
+            messagebox.showerror(
+                "Errore di lettura",
+                f"Impossibile leggere le intestazioni del file: {exc}",
+            )
+            return None
+
+        columns = list(preview.columns)
+        if not columns:
+            messagebox.showerror(
+                "Intestazioni mancanti",
+                "Il file Excel selezionato non contiene alcuna intestazione di colonna.",
+            )
+            return None
+
+        suggestions, _missing = suggest_column_mapping(columns)
+        option_values = ["(Seleziona)"] + columns
+
+        field_labels: dict[str, str] = {
+            "date": "Data (obbligatoria)",
+            "employee": "Dipendente",
+            "process": "Processo",
+            "quantity": "Quantità prodotta",
+            "duration_minutes": "Durata in minuti",
+        }
+
+        dialog = tk.Toplevel(root)
+        dialog.title("Associa colonne Excel")
+        dialog.geometry("480x360")
+        dialog.transient(root)
+
+        container = ttk.Frame(dialog, padding=16)
+        container.pack(fill="both", expand=True)
+
+        ttk.Label(
+            container,
+            text=(
+                "Abbina i campi richiesti alle colonne del file Excel."
+                " Le scelte verranno salvate per questa importazione."
+            ),
+            wraplength=430,
+            justify="left",
+        ).pack(fill="x", pady=(0, 12))
+
+        mapping_vars: dict[str, object] = {}
+
+        for field in ("date", "employee", "process", "quantity", "duration_minutes"):
+            row = ttk.Frame(container)
+            row.pack(fill="x", pady=4)
+            ttk.Label(row, text=field_labels[field]).pack(anchor="w")
+            var = tk.StringVar()
+            combo = ttk.Combobox(
+                row,
+                state="readonly",
+                values=option_values,
+                textvariable=var,
+                width=36,
+            )
+            suggestion = suggestions.get(field)
+            if suggestion and suggestion in columns:
+                combo.current(option_values.index(suggestion))
+            else:
+                combo.current(0)
+            combo.pack(fill="x", pady=(2, 0))
+            mapping_vars[field] = var
+
+        feedback_var = tk.StringVar(value="")
+        feedback = ttk.Label(container, textvariable=feedback_var, foreground="#b3261e")
+        feedback.pack(fill="x", pady=(8, 0))
+
+        actions = ttk.Frame(container)
+        actions.pack(fill="x", pady=(16, 0))
+        actions.pack_propagate(False)
+
+        result: dict[str, str] | None = None
+
+        def _confirm() -> None:
+            nonlocal result
+            selections: dict[str, str] = {}
+            used_columns: set[str] = set()
+
+            for field, var in mapping_vars.items():
+                value = var.get()
+                if value == "(Seleziona)":
+                    feedback_var.set("Completa la selezione di tutte le colonne richieste.")
+                    return
+                if value in used_columns:
+                    feedback_var.set(
+                        "Ogni colonna può essere assegnata a un solo campo. Rivedi la selezione."
+                    )
+                    return
+                used_columns.add(value)
+                selections[field] = value
+
+            result = selections
+            dialog.destroy()
+
+        def _cancel() -> None:
+            result = None
+            dialog.destroy()
+
+        ttk.Button(actions, text="Annulla", command=_cancel).pack(side="right", padx=(0, 8))
+        ttk.Button(actions, text="Importa", command=_confirm).pack(side="right")
+
+        try:
+            dialog.grab_set()
+        except Exception:  # pragma: no cover - alcuni ambienti headless
+            pass
+        dialog.focus_force()
+
+        if hasattr(root, "wait_window"):
+            root.wait_window(dialog)
+        else:  # pragma: no cover - fallback per stub di test
+            dialog.mainloop()
+
+        return result
+
     def _open_file() -> None:
         path_str = filedialog.askopenfilename(
             title="Seleziona un file Excel",
@@ -217,9 +350,19 @@ def launch_welcome_window(
         except FileNotFoundError:
             messagebox.showerror("File non trovato", f"Il file {excel_path} non esiste.")
             return
-        except ColumnMappingError as exc:
-            messagebox.showerror("Colonne mancanti", str(exc))
-            return
+        except ColumnMappingError:
+            mapping = _prompt_column_mapping(excel_path)
+            if not mapping:
+                status_var.set("Importazione annullata: abbina le colonne richieste.")
+                return
+            try:
+                records = load_operations_from_excel(excel_path, column_mapping=mapping)
+            except ColumnMappingError as exc:
+                messagebox.showerror("Colonne mancanti", str(exc))
+                return
+            except Exception as exc:  # pragma: no cover - errori imprevisti
+                messagebox.showerror("Errore", f"Impossibile leggere il file: {exc}")
+                return
         except Exception as exc:  # pragma: no cover - errori imprevisti
             messagebox.showerror("Errore", f"Impossibile leggere il file: {exc}")
             return

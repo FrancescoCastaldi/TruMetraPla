@@ -2,7 +2,11 @@
 import pandas as pd
 import pytest
 
-from trumetrapla.data_loader import ColumnMappingError, load_operations_from_excel
+from trumetrapla.data_loader import (
+    ColumnMappingError,
+    load_operations_from_excel,
+    suggest_column_mapping,
+)
 
 
 def test_load_operations_from_excel_with_default_aliases(tmp_path):
@@ -85,3 +89,16 @@ def test_missing_column_raises_error(tmp_path):
 
     with pytest.raises(ColumnMappingError):
         load_operations_from_excel(excel_path)
+
+
+def test_suggest_column_mapping_returns_resolved_headers():
+    columns = ["Data", "Operatore", "Linea", "Pezzi prodotti", "Durata (min)"]
+
+    resolved, missing = suggest_column_mapping(columns)
+
+    assert missing == ()
+    assert resolved["date"] == "Data"
+    assert resolved["employee"] == "Operatore"
+    assert resolved["process"] == "Linea"
+    assert resolved["quantity"] == "Pezzi prodotti"
+    assert resolved["duration_minutes"] == "Durata (min)"
