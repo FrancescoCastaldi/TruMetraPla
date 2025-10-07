@@ -8,8 +8,6 @@ from typing import Callable, Dict, Mapping, Protocol
 
 from .data_loader import (
     ColumnMappingError,
-    OPTIONAL_FIELDS,
-    REQUIRED_FIELDS,
     load_operations_from_excel,
     suggest_column_mapping,
 )
@@ -264,8 +262,6 @@ def launch_welcome_window(
             "date": "Data (obbligatoria)",
             "employee": "Dipendente",
             "process": "Processo",
-            "machine": "Macchina (facoltativa)",
-            "process_type": "Tipo processo (facoltativo)",
             "quantity": "Quantità prodotta",
             "duration_minutes": "Durata in minuti",
         }
@@ -290,25 +286,21 @@ def launch_welcome_window(
 
         mapping_vars: dict[str, object] = {}
 
-        optional_fields = set(OPTIONAL_FIELDS)
-        for field in list(REQUIRED_FIELDS) + list(OPTIONAL_FIELDS):
+        for field in ("date", "employee", "process", "quantity", "duration_minutes"):
             row = ttk.Frame(container)
             row.pack(fill="x", pady=4)
             ttk.Label(row, text=field_labels[field]).pack(anchor="w")
             var = tk.StringVar()
-            values = option_values
-            if field in optional_fields:
-                values = ["(Facoltativo)"] + columns
             combo = ttk.Combobox(
                 row,
                 state="readonly",
-                values=values,
+                values=option_values,
                 textvariable=var,
                 width=36,
             )
             suggestion = suggestions.get(field)
             if suggestion and suggestion in columns:
-                combo.current(values.index(suggestion))
+                combo.current(option_values.index(suggestion))
             else:
                 combo.current(0)
             combo.pack(fill="x", pady=(2, 0))
@@ -331,8 +323,6 @@ def launch_welcome_window(
 
             for field, var in mapping_vars.items():
                 value = var.get()
-                if field in optional_fields and value == "(Facoltativo)":
-                    continue
                 if value == "(Seleziona)":
                     feedback_var.set("Completa la selezione di tutte le colonne richieste.")
                     return
