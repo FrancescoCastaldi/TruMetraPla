@@ -9,7 +9,15 @@ import pandas as pd
 
 from .models import OperationRecord
 
-_CANONICAL_FIELDS = ("date", "employee", "process", "quantity", "duration_minutes")
+REQUIRED_FIELDS = (
+    "date",
+    "employee",
+    "process",
+    "quantity",
+    "duration_minutes",
+)
+OPTIONAL_FIELDS = ("machine", "process_type")
+_CANONICAL_FIELDS = REQUIRED_FIELDS + OPTIONAL_FIELDS
 
 _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "date": ("data", "date", "giorno"),
@@ -80,6 +88,10 @@ def load_operations_from_excel(
         columns={original: field for field, original in resolved_columns.items()}
     )
 
+    for optional_field in OPTIONAL_FIELDS:
+        if optional_field not in normalized.columns:
+            normalized[optional_field] = ""
+
     try:
         normalized["date"] = pd.to_datetime(normalized["date"], errors="raise").dt.date
     except Exception as exc:  # pragma: no cover - pandas eccezioni specifiche
@@ -104,8 +116,10 @@ def load_operations_from_excel(
     records = [
         OperationRecord(
             date=row["date"],
-            employee=str(row["employee"]).strip(),
-            process=str(row["process"]).strip(),
+            employee=_coerce_text(row["employee"]),
+            process=_coerce_text(row["process"]),
+            machine=_coerce_text(row.get("machine", "")),
+            process_type=_coerce_text(row.get("process_type", "")),
             quantity=int(row["quantity"]),
             duration_minutes=float(row["duration_minutes"]),
         )

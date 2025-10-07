@@ -28,7 +28,7 @@ build = [
 ]
 
 [project.scripts]
-trumetrapla = "trumetrapla.cli:main"
+trumetrapla = "trumetrapla.welcome_app:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

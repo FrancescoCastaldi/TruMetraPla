@@ -21,12 +21,17 @@ else:
 
 
 def run(argv: Sequence[str] | None = None) -> None:
-    """Avvia l'applicazione grafica o, in fallback, la CLI."""
+    """Avvia l'interfaccia grafica o, se richiesto, la CLI."""
 
     args = list(sys.argv if argv is None else argv)
-    cli_args = [arg for arg in args[1:] if arg != "--cli"]
+    raw_args = list(args[1:])
+    control_flags = {"--cli", "--no-gui", "--gui"}
+    cli_args = [arg for arg in raw_args if arg not in control_flags]
 
-    if "--cli" in args[1:]:
+    wants_cli = any(flag in raw_args for flag in ("--cli", "--no-gui"))
+    has_cli_subcommand = bool(cli_args)
+
+    if wants_cli or has_cli_subcommand:
         _run_cli(cli_args)
         return
 

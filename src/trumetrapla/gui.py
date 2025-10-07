@@ -154,6 +154,8 @@ def launch_welcome_window(
                     record.date.strftime("%d/%m/%Y"),
                     record.employee,
                     record.process,
+                    record.process_type or "-",
+                    record.machine or "-",
                     f"{record.quantity}",
                     f"{record.duration_minutes:.1f}",
                     f"{record.productivity_per_hour:.2f}",
@@ -165,9 +167,14 @@ def launch_welcome_window(
             return "Nessun dato disponibile"
 
         summary = summarize_operations(records)
+        machines = len({record.machine for record in records if record.machine})
+        process_types = len(
+            {record.process_type for record in records if record.process_type}
+        )
         return (
             "Record: {records} | Quantità totali: {qty} | Ore totali: {hours:.2f} | "
-            "Throughput medio: {throughput:.2f} pezzi/ora | Dipendenti: {employees} | Processi: {processes}"
+            "Throughput medio: {throughput:.2f} pezzi/ora | Dipendenti: {employees} | "
+            "Processi: {processes} | Macchine: {machines} | Tipi processo: {process_types}"
         ).format(
             records=len(records),
             qty=summary.total_quantity,
@@ -175,17 +182,26 @@ def launch_welcome_window(
             throughput=summary.throughput,
             employees=summary.employees,
             processes=summary.processes,
+            machines=machines,
+            process_types=process_types,
         )
 
     def _apply_filters() -> None:
         employee_value = employee_var.get()
         process_value = process_var.get()
+        machine_value = machine_var.get()
+        process_type_value = process_type_var.get()
 
         filtered = [
             record
             for record in state.records
             if (employee_value in {"", "Tutti"} or record.employee == employee_value)
             and (process_value in {"", "Tutti"} or record.process == process_value)
+            and (machine_value in {"", "Tutti", "Tutte"} or record.machine == machine_value)
+            and (
+                process_type_value in {"", "Tutti", "Tutte"}
+                or record.process_type == process_type_value
+            )
         ]
 
         state.filtered_records = filtered
@@ -195,11 +211,21 @@ def launch_welcome_window(
     def _refresh_filters(records: list[OperationRecord]) -> None:
         employees = sorted({record.employee for record in records})
         processes = sorted({record.process for record in records})
+        machines = sorted({record.machine for record in records if record.machine})
+        process_types = sorted(
+            {record.process_type for record in records if record.process_type}
+        )
 
         employee_combo.configure(values=["Tutti"] + employees)
         process_combo.configure(values=["Tutti"] + processes)
+        machine_combo.configure(values=["Tutte"] + machines if machines else ["Tutte"])
+        process_type_combo.configure(
+            values=["Tutte"] + process_types if process_types else ["Tutte"]
+        )
         employee_combo.current(0)
         process_combo.current(0)
+        machine_combo.current(0)
+        process_type_combo.current(0)
         state.filtered_records = records
 
     def _prompt_column_mapping(excel_path: Path) -> dict[str, str] | None:
@@ -571,6 +597,8 @@ def launch_welcome_window(
 
     employee_var = tk.StringVar(value="Tutti")
     process_var = tk.StringVar(value="Tutti")
+    machine_var = tk.StringVar(value="Tutte")
+    process_type_var = tk.StringVar(value="Tutte")
 
     ttk.Label(filters_frame, text="Dipendente:").pack(side="left", padx=(0, 6))
     employee_combo = ttk.Combobox(
@@ -588,13 +616,41 @@ def launch_welcome_window(
     process_combo.configure(values=["Tutti"])
     process_combo.current(0)
 
+    ttk.Label(filters_frame, text="Macchina:").pack(side="left", padx=(16, 6))
+    machine_combo = ttk.Combobox(
+        filters_frame, width=24, state="readonly", textvariable=machine_var
+    )
+    machine_combo.pack(side="left")
+    machine_combo.configure(values=["Tutte"])
+    machine_combo.current(0)
+
+    ttk.Label(filters_frame, text="Tipo processo:").pack(side="left", padx=(16, 6))
+    process_type_combo = ttk.Combobox(
+        filters_frame,
+        width=24,
+        state="readonly",
+        textvariable=process_type_var,
+    )
+    process_type_combo.pack(side="left")
+    process_type_combo.configure(values=["Tutte"])
+    process_type_combo.current(0)
+
     filter_button = ttk.Button(filters_frame, text="Applica filtri", command=_apply_filters)
     filter_button.pack(side="left", padx=(16, 0))
 
     table_frame = ttk.Frame(main_frame)
     table_frame.pack(fill="both", expand=True)
 
-    columns = ("date", "employee", "process", "quantity", "duration", "throughput")
+    columns = (
+        "date",
+        "employee",
+        "process",
+        "process_type",
+        "machine",
+        "quantity",
+        "duration",
+        "throughput",
+    )
     tree = ttk.Treeview(
         table_frame,
         columns=columns,
@@ -606,6 +662,8 @@ def launch_welcome_window(
         "date": "Data",
         "employee": "Dipendente",
         "process": "Processo",
+        "process_type": "Tipo processo",
+        "machine": "Macchina",
         "quantity": "Pezzi",
         "duration": "Durata (min)",
         "throughput": "Pezzi/ora",
@@ -613,8 +671,13 @@ def launch_welcome_window(
 
     for column in columns:
         tree.heading(column, text=headings[column])
-        anchor = "center" if column != "employee" and column != "process" else "w"
-        tree.column(column, anchor=anchor, width=140 if column != "quantity" else 100)
+        anchor = "center"
+        if column in {"employee", "process", "process_type", "machine"}:
+            anchor = "w"
+        width = 140
+        if column in {"quantity", "duration", "throughput"}:
+            width = 110
+        tree.column(column, anchor=anchor, width=width)
 
     vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
     hsb = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
@@ -636,6 +699,8 @@ def launch_welcome_window(
 
     employee_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
     process_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
+    machine_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
+    process_type_combo.bind("<<ComboboxSelected>>", lambda *_: _apply_filters())
 
     commands: dict[str, Callable[[], None]] = {
         "open_file": _open_file,

@@ -14,16 +14,20 @@ def test_load_operations_from_excel_with_default_aliases(tmp_path):
         [
             {
                 "Data": "2024-01-01",
-                "Dipendente": "Mario Rossi",
+                "Operatore": "Mario Rossi",
                 "Processo": "Taglio",
-                "Quantità": 120,
+                "Macchina": "Laser 1",
+                "Tipo processo": "Taglio",
+                "Pezzi prodotti": 120,
                 "Durata (min)": 90,
             },
             {
                 "Data": "2024-01-01",
-                "Dipendente": "Luigi Verdi",
+                "Operatore": "Luigi Verdi",
                 "Processo": "Piegatura",
-                "Quantità": 80,
+                "Macchina": "Pressa 2",
+                "Tipo processo": "Piegatura",
+                "Pezzi prodotti": 80,
                 "Durata (min)": 120,
             },
         ]
@@ -35,9 +39,12 @@ def test_load_operations_from_excel_with_default_aliases(tmp_path):
 
     assert len(records) == 2
     assert records[0].employee == "Mario Rossi"
+    assert records[0].machine == "Laser 1"
+    assert records[0].process_type == "Taglio"
     assert records[0].quantity == 120
     assert pytest.approx(records[0].hours, rel=1e-3) == 1.5
     assert records[1].process == "Piegatura"
+    assert records[1].machine == "Pressa 2"
 
 
 def test_load_operations_with_custom_mapping(tmp_path):
@@ -47,6 +54,8 @@ def test_load_operations_with_custom_mapping(tmp_path):
                 "Date": "2024-02-01",
                 "Worker": "Anna Bianchi",
                 "Stage": "Saldatura",
+                "Machine": "Isola 3",
+                "Category": "Assemblaggio",
                 "Pieces": 50,
                 "Minutes": 45,
             }
@@ -61,6 +70,8 @@ def test_load_operations_with_custom_mapping(tmp_path):
             "date": "Date",
             "employee": "Worker",
             "process": "Stage",
+            "machine": "Machine",
+            "process_type": "Category",
             "quantity": "Pieces",
             "duration_minutes": "Minutes",
         },
@@ -68,6 +79,8 @@ def test_load_operations_with_custom_mapping(tmp_path):
 
     assert len(records) == 1
     assert records[0].employee == "Anna Bianchi"
+    assert records[0].machine == "Isola 3"
+    assert records[0].process_type == "Assemblaggio"
     assert records[0].quantity == 50
     assert pytest.approx(records[0].productivity_per_hour, rel=1e-3) == pytest.approx(66.6666, rel=1e-3)
 
@@ -77,8 +90,10 @@ def test_missing_column_raises_error(tmp_path):
         [
             {
                 "Data": "2024-01-01",
-                "Dipendente": "Mario Rossi",
+                "Operatore": "Mario Rossi",
                 "Processo": "Taglio",
+                "Macchina": "Laser 1",
+                "Tipo processo": "Taglio",
                 # Quantità mancante
                 "Durata (min)": 90,
             }
