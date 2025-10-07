@@ -286,21 +286,25 @@ def launch_welcome_window(
 
         mapping_vars: dict[str, object] = {}
 
-        for field in ("date", "employee", "process", "quantity", "duration_minutes"):
+        optional_fields = set(OPTIONAL_FIELDS)
+        for field in list(REQUIRED_FIELDS) + list(OPTIONAL_FIELDS):
             row = ttk.Frame(container)
             row.pack(fill="x", pady=4)
             ttk.Label(row, text=field_labels[field]).pack(anchor="w")
             var = tk.StringVar()
+            values = option_values
+            if field in optional_fields:
+                values = ["(Facoltativo)"] + columns
             combo = ttk.Combobox(
                 row,
                 state="readonly",
-                values=option_values,
+                values=values,
                 textvariable=var,
                 width=36,
             )
             suggestion = suggestions.get(field)
             if suggestion and suggestion in columns:
-                combo.current(option_values.index(suggestion))
+                combo.current(values.index(suggestion))
             else:
                 combo.current(0)
             combo.pack(fill="x", pady=(2, 0))
@@ -323,6 +327,8 @@ def launch_welcome_window(
 
             for field, var in mapping_vars.items():
                 value = var.get()
+                if field in optional_fields and value == "(Facoltativo)":
+                    continue
                 if value == "(Seleziona)":
                     feedback_var.set("Completa la selezione di tutte le colonne richieste.")
                     return
@@ -342,7 +348,7 @@ def launch_welcome_window(
             dialog.destroy()
 
         ttk.Button(actions, text="Annulla", command=_cancel).pack(side="right", padx=(0, 8))
-        ttk.Button(actions, text="Importa", command=_confirm).pack(side="right")
+        ttk.Button(actions, text="OK", command=_confirm).pack(side="right")
 
         try:
             dialog.grab_set()

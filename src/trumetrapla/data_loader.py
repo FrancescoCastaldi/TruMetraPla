@@ -63,6 +63,17 @@ class ColumnMappingError(ValueError):
     """Errore sollevato quando le colonne richieste non sono presenti."""
 
 
+def _coerce_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        text = value.strip()
+        return "" if text.casefold() == "nan" else text
+    if pd.isna(value):  # type: ignore[arg-type]
+        return ""
+    return str(value).strip()
+
+
 def load_operations_from_excel(
     path: str | Path,
     *,
