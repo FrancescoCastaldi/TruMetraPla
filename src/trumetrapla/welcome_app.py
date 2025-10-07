@@ -50,5 +50,29 @@ def _run_cli(arguments: Iterable[str]) -> None:
     cli_main.main(args=list(arguments), prog_name="TruMetraPla", standalone_mode=False)
 
 
+def _strip_module_invocation_tokens(arguments: list[str]) -> list[str]:
+    """Rimuove i token ``-m`` e il relativo modulo dall'invocazione Python."""
+
+    cleaned: list[str] = []
+    skip_next = False
+    for token in arguments:
+        if skip_next:
+            skip_next = False
+            continue
+
+        if token == "-m":
+            skip_next = True
+            continue
+
+        # Gli stub ``py -m`` possono includere il percorso completo del modulo.
+        if not cleaned and token.replace("\\", "/").startswith("trumetrapla"):
+            # Ignoriamo il nome del modulo quando è la prima voce residua.
+            continue
+
+        cleaned.append(token)
+
+    return cleaned
+
+
 if __name__ == "__main__":
     run()
