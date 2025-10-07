@@ -92,6 +92,14 @@ class DummyButton(DummyWidget):
         self.command = command
 
 
+class DummyLabel(DummyWidget):
+    instances: list["DummyLabel"] = []
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        DummyLabel.instances.append(self)
+
+
 class DummyCombobox(DummyWidget):
     def __init__(self, *args, textvariable=None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -205,12 +213,13 @@ class DummyTkModule:
 
 class DummyToolkit(dict):
     def __init__(self) -> None:
+        DummyLabel.instances = []
         self.tk_module = DummyTkModule()
         self.messagebox = DummyMessagebox()
         self.filedialog = DummyFileDialog()
         self.ttk_module = types.SimpleNamespace(
             Frame=DummyWidget,
-            Label=DummyWidget,
+            Label=DummyLabel,
             Button=DummyButton,
             Combobox=DummyCombobox,
             Treeview=DummyTreeview,
@@ -227,8 +236,24 @@ class DummyToolkit(dict):
 def test_launch_welcome_window_loads_excel_and_updates_state():
     toolkit = DummyToolkit()
     sample_records = [
-        OperationRecord(date=date(2024, 1, 1), employee="Anna", process="Taglio", quantity=10, duration_minutes=60),
-        OperationRecord(date=date(2024, 1, 2), employee="Luca", process="Assemblaggio", quantity=8, duration_minutes=90),
+        OperationRecord(
+            date=date(2024, 1, 1),
+            employee="Anna",
+            process="Taglio",
+            machine="Laser 1",
+            process_type="Taglio",
+            quantity=10,
+            duration_minutes=60,
+        ),
+        OperationRecord(
+            date=date(2024, 1, 2),
+            employee="Luca",
+            process="Assemblaggio",
+            machine="Linea 3",
+            process_type="Assemblaggio",
+            quantity=8,
+            duration_minutes=90,
+        ),
     ]
 
     loader_calls: dict[str, Path] = {}
@@ -249,6 +274,11 @@ def test_launch_welcome_window_loads_excel_and_updates_state():
     root = handles.root
     assert root.title_value == "TruMetraPla - Console Analitica"
     assert root.resizable_value == (True, True)
+
+    assert any(
+        widget.kwargs.get("text") == "Prodotto da Francesco Castaldi"
+        for widget in DummyLabel.instances
+    )
 
     handles.commands["open_file"]()
 
