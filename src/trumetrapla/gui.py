@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
+import re
 from typing import Callable, Dict, Mapping, Protocol
 
 from .data_loader import (
@@ -52,6 +54,27 @@ class _AppState:
     records: list[OperationRecord] = field(default_factory=list)
     filtered_records: list[OperationRecord] = field(default_factory=list)
     file_path: Path | None = None
+    column_specs: "OrderedDict[str, ColumnSpec]" = field(
+        default_factory=OrderedDict
+    )
+    column_order: list[str] = field(default_factory=list)
+    visible_columns: list[str] = field(default_factory=list)
+    grouping_accessors: dict[str, Callable[[OperationRecord], object]] = field(
+        default_factory=dict
+    )
+
+
+@dataclass
+class ColumnSpec:
+    """Descrive una colonna mostrabile nella tabella principale."""
+
+    identifier: str
+    label: str
+    getter: Callable[[OperationRecord], str]
+    anchor: str = "center"
+    width: int = 140
+    grouping_key: str | None = None
+    source: str | None = None
 
 
 @dataclass
@@ -126,7 +149,7 @@ def launch_welcome_window(
     root.resizable(True, True)
 
     try:
-        root.configure(background="#f4f5f7")
+        root.configure(background="#020617")
     except Exception:  # pragma: no cover - alcuni stub di test non implementano configure
         pass
 
@@ -151,6 +174,133 @@ def launch_welcome_window(
     state = _AppState()
     loader = operations_loader or (lambda path: load_operations_from_excel(path))
 
+    def _canonical_column_specs() -> OrderedDict[str, ColumnSpec]:
+        specs: OrderedDict[str, ColumnSpec] = OrderedDict()
+        specs["date"] = ColumnSpec(
+            identifier="date",
+            label="Data",
+            getter=lambda record: record.date.strftime("%d/%m/%Y"),
+            width=110,
+            grouping_key="date",
+        )
+        specs["employee"] = ColumnSpec(
+            identifier="employee",
+            label="Dipendente",
+            getter=lambda record: record.employee or "-",
+            anchor="w",
+            grouping_key="employee",
+        )
+        specs["process"] = ColumnSpec(
+            identifier="process",
+            label="Processo",
+            getter=lambda record: record.process or "-",
+            anchor="w",
+            grouping_key="process",
+        )
+        specs["process_type"] = ColumnSpec(
+            identifier="process_type",
+            label="Tipo processo",
+            getter=lambda record: record.process_type or "-",
+            anchor="w",
+            width=150,
+            grouping_key="process_type",
+        )
+        specs["machine"] = ColumnSpec(
+            identifier="machine",
+            label="Macchina",
+            getter=lambda record: record.machine or "-",
+            anchor="w",
+            grouping_key="machine",
+        )
+        specs["quantity"] = ColumnSpec(
+            identifier="quantity",
+            label="Pezzi",
+            getter=lambda record: f"{record.quantity}",
+            width=100,
+        )
+        specs["duration_minutes"] = ColumnSpec(
+            identifier="duration_minutes",
+            label="Durata (min)",
+            getter=lambda record: f"{record.duration_minutes:.1f}",
+            width=110,
+        )
+        specs["throughput"] = ColumnSpec(
+            identifier="throughput",
+            label="Pezzi/ora",
+            getter=lambda record: f"{record.productivity_per_hour:.2f}",
+            width=110,
+        )
+        return specs
+
+    state.column_specs = _canonical_column_specs()
+    state.column_order = list(state.column_specs.keys())
+    state.visible_columns = list(state.column_order)
+
+    def _slugify_extra(label: str, used: set[str]) -> str:
+        token = re.sub(r"[^0-9a-z]+", "_", label.lower()).strip("_")
+        if not token:
+            token = "colonna"
+        base = f"extra_{token}"
+        identifier = base
+        counter = 1
+        while identifier in used:
+            identifier = f"{base}_{counter}"
+            counter += 1
+        used.add(identifier)
+        return identifier
+
+    def _refresh_column_specs(records: list[OperationRecord]) -> None:
+        base_specs = _canonical_column_specs()
+        used_ids = set(base_specs.keys())
+        extras_order: list[str] = []
+        for record in records:
+            for key in record.extra.keys():
+                if key not in extras_order:
+                    extras_order.append(key)
+
+        grouping_accessors: dict[str, Callable[[OperationRecord], object]] = {}
+        specs: OrderedDict[str, ColumnSpec] = OrderedDict(base_specs)
+
+        for column in extras_order:
+            identifier = _slugify_extra(column, used_ids)
+            grouping_key = f"extra:{column}"
+
+            def _make_getter(field: str) -> Callable[[OperationRecord], str]:
+                def _getter(record: OperationRecord, field: str = field) -> str:
+                    value = record.extra.get(field, "")
+                    if value in (None, "nan"):
+                        return ""
+                    return str(value)
+
+                return _getter
+
+            specs[identifier] = ColumnSpec(
+                identifier=identifier,
+                label=column,
+                getter=_make_getter(column),
+                anchor="w",
+                width=max(140, min(len(column) * 10, 220)),
+                grouping_key=grouping_key,
+                source=column,
+            )
+            grouping_accessors[grouping_key] = (
+                lambda record, field=column: record.extra.get(field, "")
+            )
+
+        state.column_specs = specs
+        state.column_order = list(specs.keys())
+
+        previous_selection = [
+            column_id for column_id in state.visible_columns if column_id in specs
+        ]
+        if not previous_selection:
+            previous_selection = list(base_specs.keys())
+        for column_id in specs.keys():
+            if column_id not in previous_selection:
+                previous_selection.append(column_id)
+        state.visible_columns = previous_selection
+        state.grouping_accessors = grouping_accessors
+
     # Variabili di stato testuali
     file_var = tk.StringVar(value="Nessun file Excel aperto")
     summary_var = tk.StringVar(value="Carica un file per visualizzare i KPI")
@@ -162,8 +312,28 @@ def launch_welcome_window(
     tools_menu = tk.Menu(menubar, tearoff=0)
     help_menu = tk.Menu(menubar, tearoff=0)
 
+    def _active_columns() -> list[str]:
+        selected = [
+            column_id for column_id in state.visible_columns if column_id in state.column_specs
+        ]
+        if selected:
+            return selected
+        return list(state.column_specs.keys())
+
+    def _configure_tree_columns() -> None:
+        columns = _active_columns()
+        tree.configure(columns=columns, displaycolumns=columns)
+        for column_id in columns:
+            spec = state.column_specs.get(column_id)
+            if not spec:
+                continue
+            tree.heading(column_id, text=spec.label)
+            tree.column(column_id, anchor=spec.anchor, width=spec.width)
+
     def _update_table(records: list[OperationRecord]) -> None:
+        _configure_tree_columns()
         tree.delete(*tree.get_children())
+        columns = _active_columns()
         for record in records:
             tree.insert(
                 "",
@@ -205,6 +375,12 @@ def launch_welcome_window(
         )
 
     def _apply_filters() -> None:
+        if not state.records:
+            summary_var.set("Nessun dato da filtrare: carica un file Excel.")
+            status_var.set("Filtri in attesa di dati")
+            tree.delete(*tree.get_children())
+            return
+
         employee_value = employee_var.get()
         process_value = process_var.get()
         machine_value = machine_var.get()
@@ -225,6 +401,11 @@ def launch_welcome_window(
         state.filtered_records = filtered
         _update_table(filtered)
         summary_var.set(_format_summary(filtered))
+        status_var.set(
+            "Filtri applicati: {visibili} su {totali} record".format(
+                visibili=len(filtered), totali=len(state.records)
+            )
+        )
 
     def _refresh_filters(records: list[OperationRecord]) -> None:
         employees = sorted({record.employee for record in records})
@@ -421,8 +602,95 @@ def launch_welcome_window(
         state.file_path = excel_path
         file_var.set(f"File corrente: {excel_path}")
         status_var.set(f"Caricate {len(records)} righe dal file Excel")
+        _refresh_column_specs(records)
         _refresh_filters(records)
         _apply_filters()
+
+    def _open_column_manager() -> None:
+        if not state.column_specs:
+            messagebox.showinfo(
+                "Colonne non disponibili",
+                "Carica un file Excel per personalizzare la tabella.",
+            )
+            return
+
+        dialog = tk.Toplevel(root)
+        dialog.title("Configura colonne visibili")
+        dialog.geometry("360x420")
+        dialog.transient(root)
+        try:
+            dialog.configure(background="#020617")
+        except Exception:  # pragma: no cover - stub di test
+            pass
+
+        container = ttk.Frame(dialog, padding=16, style="Card.TFrame")
+        container.pack(fill="both", expand=True)
+
+        ttk.Label(
+            container,
+            text="Seleziona le colonne da mostrare nella tabella principale.",
+            wraplength=320,
+            justify="left",
+            style="Info.TLabel",
+        ).pack(fill="x", pady=(0, 12))
+
+        checklist = ttk.Frame(container, style="Card.TFrame")
+        checklist.pack(fill="both", expand=True)
+
+        bool_vars: dict[str, object] = {}
+        for column_id in state.column_order:
+            spec = state.column_specs[column_id]
+            var = tk.BooleanVar(value=column_id in _active_columns())
+            bool_vars[column_id] = var
+            ttk.Checkbutton(
+                checklist,
+                text=spec.label,
+                variable=var,
+            ).pack(anchor="w", pady=2)
+
+        feedback_var = tk.StringVar(value="")
+        ttk.Label(
+            checklist,
+            textvariable=feedback_var,
+            foreground="#f97316",
+            style="Info.TLabel",
+        ).pack(anchor="w", pady=(8, 0))
+
+        actions = ttk.Frame(container, style="Card.TFrame")
+        actions.pack(fill="x", pady=(18, 0))
+
+        def _confirm_columns() -> None:
+            selected = [
+                column_id for column_id, var in bool_vars.items() if bool(var.get())
+            ]
+            if not selected:
+                feedback_var.set("Seleziona almeno una colonna da visualizzare.")
+                return
+
+            state.visible_columns = selected
+            current = state.filtered_records or state.records
+            _update_table(current)
+            status_var.set(
+                "Colonne aggiornate ({})".format(
+                    ", ".join(state.column_specs[col].label for col in selected)
+                )
+            )
+            dialog.destroy()
+
+        ttk.Button(actions, text="Annulla", command=dialog.destroy).pack(
+            side="right", padx=(0, 8)
+        )
+        ttk.Button(actions, text="Applica", command=_confirm_columns).pack(side="right")
+
+        try:
+            dialog.grab_set()
+        except Exception:  # pragma: no cover - ambienti headless
+            pass
+        dialog.focus_force()
+        if hasattr(root, "wait_window"):
+            root.wait_window(dialog)
+        else:  # pragma: no cover
+            dialog.mainloop()
 
     def _show_kpi_dialog() -> None:
         if not state.filtered_records:
@@ -609,10 +877,16 @@ def launch_welcome_window(
     header = ttk.Frame(main_frame, style="Dashboard.TFrame")
     header.pack(fill="x")
 
-    ttk.Label(header, textvariable=file_var, font=("Segoe UI", 11, "bold"), anchor="w").pack(
+    ttk.Label(
+        header,
+        textvariable=file_var,
+        font=("Segoe UI", 11, "bold"),
+        anchor="w",
+        style="Header.TLabel",
+    ).pack(
         fill="x", pady=(0, 4)
     )
-    ttk.Label(header, textvariable=summary_var, wraplength=920, anchor="w").pack(
+    ttk.Label(header, textvariable=summary_var, wraplength=920, anchor="w", style="Info.TLabel").pack(
         fill="x"
     )
 
@@ -677,9 +951,10 @@ def launch_welcome_window(
     )
     tree = ttk.Treeview(
         table_frame,
-        columns=columns,
+        columns=tuple(state.visible_columns),
         show="headings",
         height=15,
+        style="Tech.Treeview",
     )
 
     headings = {

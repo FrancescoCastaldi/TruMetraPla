@@ -161,6 +161,26 @@ def load_operations_from_excel(
         )
         for row in normalized[canonical_columns].to_dict(orient="records")
     ]
+
+    records: list[OperationRecord] = []
+    for row in normalized.to_dict(orient="records"):
+        extras = {
+            column: _coerce_text(row.get(column, ""))
+            for column in extras_columns
+        }
+        records.append(
+            OperationRecord(
+                date=row["date"],
+                employee=_coerce_text(row["employee"]),
+                process=_coerce_text(row["process"]),
+                machine=_coerce_text(row.get("machine", "")),
+                process_type=_coerce_text(row.get("process_type", "")),
+                quantity=int(row["quantity"]),
+                duration_minutes=float(row["duration_minutes"]),
+                extra=extras,
+            )
+        )
+
     return records
 
 

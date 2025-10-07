@@ -19,6 +19,17 @@ class DummyStringVar:
         return self._value
 
 
+class DummyBooleanVar:
+    def __init__(self, value: bool = False) -> None:
+        self._value = bool(value)
+
+    def set(self, value: bool) -> None:
+        self._value = bool(value)
+
+    def get(self) -> bool:
+        return self._value
+
+
 class DummyMenu:
     def __init__(self, *_args, **_kwargs) -> None:
         self.items: list[tuple[str, tuple]] = []
@@ -216,6 +227,7 @@ class DummyTkModule:
         self.instances: list[DummyRoot] = []
         self.Menu = DummyMenu
         self.StringVar = DummyStringVar
+        self.BooleanVar = DummyBooleanVar
 
     def Tk(self) -> DummyRoot:
         root = DummyRoot(self)
@@ -299,6 +311,44 @@ def test_launch_welcome_window_loads_excel_and_updates_state():
     assert handles.state.records == sample_records
     assert handles.state.filtered_records == sample_records
     assert toolkit.messagebox.error_calls == []
+
+
+def test_extra_columns_are_registered_and_groupable():
+    toolkit = DummyToolkit()
+    sample_records = [
+        OperationRecord(
+            date=date(2024, 5, 1),
+            employee="Anna",
+            process="Taglio",
+            machine="Laser 2",
+            process_type="Taglio",
+            quantity=20,
+            duration_minutes=45,
+            extra={"Turno": "Notte", "Note": "Urgente"},
+        )
+    ]
+
+    def fake_loader(_: Path) -> list[OperationRecord]:
+        return sample_records
+
+    toolkit.filedialog.return_value = "C:/shift.xlsx"
+
+    handles = launch_welcome_window(
+        run_mainloop=False,
+        operations_loader=fake_loader,
+        _toolkit=toolkit,
+    )
+
+    assert handles is not None
+    handles.commands["open_file"]()
+
+    specs = list(handles.state.column_specs.values())
+    labels = [spec.label for spec in specs]
+    assert "Turno" in labels
+    turno_spec = next(spec for spec in specs if spec.label == "Turno")
+    assert turno_spec.identifier in handles.state.visible_columns
+    assert turno_spec.grouping_key is not None
+    assert turno_spec.grouping_key in handles.state.grouping_accessors
 
 
 def test_launch_welcome_window_requires_valid_toolkit():
