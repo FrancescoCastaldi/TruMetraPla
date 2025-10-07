@@ -8,18 +8,10 @@ from typing import Callable, Dict, Mapping, Protocol
 
 from .data_loader import (
     ColumnMappingError,
-    OPTIONAL_FIELDS,
-    REQUIRED_FIELDS,
     load_operations_from_excel,
     suggest_column_mapping,
 )
-from .metrics import (
-    daily_trend,
-    group_by_attributes,
-    group_by_employee,
-    group_by_process,
-    summarize_operations,
-)
+from .metrics import group_by_employee, group_by_process, summarize_operations
 from .models import OperationRecord
 
 
@@ -288,8 +280,6 @@ def launch_welcome_window(
             "date": "Data (obbligatoria)",
             "employee": "Dipendente",
             "process": "Processo",
-            "machine": "Macchina (facoltativa)",
-            "process_type": "Tipo processo (facoltativo)",
             "quantity": "Quantità prodotta",
             "duration_minutes": "Durata in minuti",
         }
@@ -474,7 +464,7 @@ def launch_welcome_window(
 
         messagebox.showinfo("KPI principali", message)
 
-    def _show_chart_dialog() -> None:
+    def _show_pie_chart() -> None:
         records = state.filtered_records or state.records
         if not records:
             messagebox.showinfo(
@@ -501,77 +491,35 @@ def launch_welcome_window(
 
         chart_window = tk.Toplevel(root)
         chart_window.title("Report grafico TruMetraPla")
-        chart_window.geometry("820x580")
+        chart_window.geometry("720x520")
         try:
-            chart_window.minsize(640, 480)
+            chart_window.minsize(560, 420)
         except Exception:  # pragma: no cover - alcuni stub non implementano minsize
             pass
 
-        container = ttk.Frame(chart_window, padding=20, style="Card.TFrame")
+        container = ttk.Frame(chart_window, padding=16)
         container.pack(fill="both", expand=True)
 
         heading = ttk.Label(
             container,
             text="Distribuzione dei pezzi prodotti",
-            style="Header.TLabel",
+            font=("Segoe UI", 12, "bold"),
         )
         heading.pack(anchor="w")
 
-        options_frame = ttk.Frame(container, style="Card.TFrame")
+        options_frame = ttk.Frame(container)
         options_frame.pack(fill="x", pady=(12, 8))
-
-        ttk.Label(options_frame, text="Tipo grafico:").pack(side="left")
-
-        chart_type_combo = ttk.Combobox(
-            options_frame,
-            state="readonly",
-            values=[
-                "Grafico a torta",
-                "Barre orizzontali",
-                "Trend giornaliero",
-            ],
-            width=24,
-        )
-        chart_type_combo.current(0)
-        chart_type_combo.pack(side="left", padx=(6, 14))
 
         ttk.Label(options_frame, text="Raggruppa per:").pack(side="left")
 
-        grouping_options = [
-            ("Processo", "process"),
-            ("Dipendente", "employee"),
-            ("Macchina", "machine"),
-            ("Tipo processo", "process_type"),
-        ]
-        grouping_labels = [label for label, _ in grouping_options]
-        grouping_map = {label: attr for label, attr in grouping_options}
-
-        primary_combo = ttk.Combobox(
+        grouping_combo = ttk.Combobox(
             options_frame,
             state="readonly",
-            values=grouping_labels,
-            width=18,
+            values=["Processo", "Dipendente"],
+            width=20,
         )
-        primary_combo.current(0)
-        primary_combo.pack(side="left", padx=6)
-
-        secondary_combo = ttk.Combobox(
-            options_frame,
-            state="readonly",
-            values=["Nessuno"] + grouping_labels,
-            width=18,
-        )
-        secondary_combo.current(0)
-        secondary_combo.pack(side="left", padx=6)
-
-        tertiary_combo = ttk.Combobox(
-            options_frame,
-            state="readonly",
-            values=["Nessuno"] + grouping_labels,
-            width=18,
-        )
-        tertiary_combo.current(0)
-        tertiary_combo.pack(side="left", padx=6)
+        grouping_combo.current(0)
+        grouping_combo.pack(side="left", padx=8)
 
         figure = Figure(figsize=(5.8, 4.2), dpi=100)
         axis = figure.add_subplot(111)
@@ -579,66 +527,19 @@ def launch_welcome_window(
         canvas.get_tk_widget().pack(fill="both", expand=True)
 
         info_var = tk.StringVar(value="")
-        ttk.Label(
-            container,
-            textvariable=info_var,
-            wraplength=740,
-            justify="center",
-        ).pack(fill="x", pady=(8, 0))
-
-        display_names = {attr: label for label, attr in grouping_options}
-
-        def _selected_fields() -> tuple[list[str], list[str]]:
-            duplicates: list[str] = []
-            seen: set[str] = set()
-            result: list[str] = []
-            for combo in (primary_combo, secondary_combo, tertiary_combo):
-                value = combo.get()
-                attr = grouping_map.get(value)
-                if attr is None:
-                    continue
-                if attr in seen:
-                    duplicates.append(value)
-                    continue
-                seen.add(attr)
-                result.append(attr)
-            return result, duplicates
+        ttk.Label(container, textvariable=info_var, wraplength=660, justify="center").pack(
+            fill="x", pady=(8, 0)
+        )
 
         def _refresh_chart(*_args: object) -> None:
-            chosen_fields, duplicates = _selected_fields()
-            chart_type = chart_type_combo.get()
+            selected = grouping_combo.get()
+            if selected == "Dipendente":
+                breakdown = group_by_employee(records)
+                title = "Distribuzione pezzi per dipendente"
+            else:
+                breakdown = group_by_process(records)
+                title = "Distribuzione pezzi per processo"
 
-            axis.clear()
-            axis.set_facecolor("#f7f7f7")
-
-            if chart_type == "Trend giornaliero":
-                trend = daily_trend(records)
-                if not trend:
-                    info_var.set(
-                        "Nessun dato disponibile per mostrare l'andamento giornaliero."
-                    )
-                    canvas.draw_idle()
-                    return
-
-                info_var.set("Andamento delle quantità prodotte per giorno.")
-                dates = [item.date for item in trend]
-                totals = [item.total_quantity for item in trend]
-                axis.plot_date(dates, totals, linestyle="-", marker="o", color="#2563eb")
-                axis.set_title("Trend giornaliero dei pezzi prodotti")
-                axis.set_ylabel("Pezzi prodotti")
-                axis.grid(alpha=0.25)
-                figure.autofmt_xdate()
-                canvas.draw_idle()
-                return
-
-            if not chosen_fields:
-                chosen_fields = [grouping_options[0][1]]
-
-            breakdown = group_by_attributes(
-                records,
-                chosen_fields,
-                display_names=display_names,
-            )
             filtered_breakdown = [
                 item for item in breakdown if item.total_quantity > 0
             ]
@@ -647,60 +548,32 @@ def launch_welcome_window(
                 info_var.set(
                     "Non sono disponibili dati con quantità positive per il grafico selezionato."
                 )
+                axis.clear()
                 canvas.draw_idle()
                 return
 
-            if duplicates:
-                info_var.set(
-                    "Campi duplicati rimossi dal raggruppamento: "
-                    + ", ".join(dict.fromkeys(duplicates))
-                )
-            else:
-                combo_description = " → ".join(
-                    display_names[field] for field in chosen_fields
-                )
-                info_var.set(
-                    f"Raggruppamento attivo: {combo_description}."
-                )
+            info_var.set("")
+            axis.clear()
 
             values = [item.total_quantity for item in filtered_breakdown]
             labels = [item.entity for item in filtered_breakdown]
+            total = sum(values)
 
-            if chart_type == "Barre orizzontali":
-                axis.barh(range(len(labels)), values, color="#22c55e")
-                axis.set_yticks(range(len(labels)))
-                axis.set_yticklabels(labels)
-                axis.invert_yaxis()
-                axis.set_xlabel("Pezzi prodotti")
-                axis.set_title("Distribuzione per raggruppamento")
-                for index, value in enumerate(values):
-                    axis.text(value + max(values) * 0.01, index, str(value), va="center")
-            else:
-                total = sum(values)
+            def _format_pct(pct: float) -> str:
+                absolute = int(round(pct * total / 100.0))
+                return f"{pct:.1f}% ({absolute} pezzi)"
 
-                def _format_pct(pct: float) -> str:
-                    absolute = int(round(pct * total / 100.0))
-                    return f"{pct:.1f}% ({absolute} pezzi)"
-
-                axis.pie(
-                    values,
-                    labels=labels,
-                    autopct=_format_pct,
-                    startangle=90,
-                )
-                axis.set_title("Distribuzione dei pezzi prodotti")
-                axis.axis("equal")
-
+            axis.pie(
+                values,
+                labels=labels,
+                autopct=_format_pct,
+                startangle=90,
+            )
+            axis.set_title(title)
+            axis.axis("equal")
             canvas.draw_idle()
 
-        for widget in (
-            chart_type_combo,
-            primary_combo,
-            secondary_combo,
-            tertiary_combo,
-        ):
-            widget.bind("<<ComboboxSelected>>", _refresh_chart)
-
+        grouping_combo.bind("<<ComboboxSelected>>", _refresh_chart)
         _refresh_chart()
 
     file_menu.add_command(label="Apri file Excel…", command=_open_file)
@@ -708,7 +581,7 @@ def launch_welcome_window(
     file_menu.add_command(label="Esci", command=root.destroy)
 
     tools_menu.add_command(label="Mostra KPI filtrati", command=_show_kpi_dialog)
-    tools_menu.add_command(label="Dashboard grafica", command=_show_chart_dialog)
+    tools_menu.add_command(label="Grafico a torta", command=_show_pie_chart)
 
     def _open_docs() -> None:
         import webbrowser
@@ -841,24 +714,11 @@ def launch_welcome_window(
     footer = ttk.Frame(main_frame, style="Dashboard.TFrame")
     footer.pack(fill="x", pady=(12, 0))
 
-    ttk.Button(
-        footer,
-        text="Apri file Excel…",
-        command=_open_file,
-        style="Accent.TButton",
-    ).pack(side="left")
-    ttk.Button(
-        footer,
-        text="Mostra KPI",
-        command=_show_kpi_dialog,
-        style="Accent.TButton",
-    ).pack(side="left", padx=8)
-    ttk.Button(
-        footer,
-        text="Apri dashboard grafica",
-        command=_show_chart_dialog,
-        style="Accent.TButton",
-    ).pack(side="left", padx=8)
+    ttk.Button(footer, text="Apri file Excel…", command=_open_file).pack(side="left")
+    ttk.Button(footer, text="Mostra KPI", command=_show_kpi_dialog).pack(side="left", padx=8)
+    ttk.Button(footer, text="Grafico a torta", command=_show_pie_chart).pack(
+        side="left", padx=8
+    )
     ttk.Label(footer, textvariable=status_var).pack(side="right")
 
     ttk.Label(
@@ -875,7 +735,7 @@ def launch_welcome_window(
     commands: dict[str, Callable[[], None]] = {
         "open_file": _open_file,
         "show_kpi": _show_kpi_dialog,
-        "show_chart": _show_chart_dialog,
+        "show_chart": _show_pie_chart,
         "apply_filters": _apply_filters,
     }
 
