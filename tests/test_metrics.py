@@ -5,6 +5,7 @@ import pytest
 
 from trumetrapla.metrics import (
     daily_trend,
+    group_by_attributes,
     group_by_employee,
     group_by_process,
     summarize_operations,
@@ -77,3 +78,15 @@ def test_daily_trend():
     assert trend[0].date == date(2024, 1, 1)
     assert trend[0].total_quantity == 200
     assert trend[1].throughput == pytest.approx(60.0, rel=1e-3)
+
+
+def test_group_by_multiple_attributes():
+    performances = group_by_attributes(
+        _sample_records(),
+        ("process", "machine"),
+        display_names={"process": "Processo", "machine": "Macchina"},
+    )
+
+    assert performances[0].entity == "Processo: Taglio • Macchina: Laser 1"
+    assert performances[0].total_quantity == 120
+    assert all(" • " in item.entity for item in performances)

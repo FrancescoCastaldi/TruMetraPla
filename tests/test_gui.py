@@ -177,6 +177,18 @@ class DummyScrollbar(DummyWidget):
         self.set_calls.append((first, last))
 
 
+class DummyStyle:
+    def __init__(self) -> None:
+        self.theme: str | None = None
+        self.configure_calls: list[tuple[str, dict[str, object]]] = []
+
+    def theme_use(self, theme: str) -> None:
+        self.theme = theme
+
+    def configure(self, style_name: str, **kwargs) -> None:
+        self.configure_calls.append((style_name, kwargs))
+
+
 class DummyMessagebox:
     def __init__(self) -> None:
         self.info_calls: list[tuple[str, str]] = []
@@ -224,6 +236,7 @@ class DummyToolkit(dict):
             Combobox=DummyCombobox,
             Treeview=DummyTreeview,
             Scrollbar=DummyScrollbar,
+            Style=DummyStyle,
         )
         super().__init__(
             tk=self.tk_module,

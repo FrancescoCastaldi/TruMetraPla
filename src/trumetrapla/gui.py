@@ -130,6 +130,24 @@ def launch_welcome_window(
     except Exception:  # pragma: no cover - alcuni stub di test non implementano configure
         pass
 
+    style = None
+    if hasattr(ttk, "Style"):
+        try:
+            style = ttk.Style()
+        except Exception:  # pragma: no cover - alcuni toolkit fittizi possono fallire
+            style = None
+
+    if style is not None:
+        try:
+            style.theme_use("clam")
+        except Exception:  # pragma: no cover - tema non disponibile
+            pass
+
+        style.configure("Dashboard.TFrame", background="#f4f5f7")
+        style.configure("Card.TFrame", background="#ffffff", relief="ridge")
+        style.configure("Header.TLabel", font=("Segoe UI", 12, "bold"))
+        style.configure("Accent.TButton", font=("Segoe UI Semibold", 10))
+
     state = _AppState()
     loader = operations_loader or (lambda path: load_operations_from_excel(path))
 
@@ -585,10 +603,10 @@ def launch_welcome_window(
         pass
 
     # Layout principale
-    main_frame = ttk.Frame(root, padding=16)
+    main_frame = ttk.Frame(root, padding=20, style="Dashboard.TFrame")
     main_frame.pack(expand=True, fill="both")
 
-    header = ttk.Frame(main_frame)
+    header = ttk.Frame(main_frame, style="Dashboard.TFrame")
     header.pack(fill="x")
 
     ttk.Label(header, textvariable=file_var, font=("Segoe UI", 11, "bold"), anchor="w").pack(
@@ -598,7 +616,7 @@ def launch_welcome_window(
         fill="x"
     )
 
-    filters_frame = ttk.Frame(main_frame)
+    filters_frame = ttk.Frame(main_frame, style="Dashboard.TFrame")
     filters_frame.pack(fill="x", pady=12)
 
     employee_var = tk.StringVar(value="Tutti")
@@ -644,7 +662,7 @@ def launch_welcome_window(
     filter_button = ttk.Button(filters_frame, text="Applica filtri", command=_apply_filters)
     filter_button.pack(side="left", padx=(16, 0))
 
-    table_frame = ttk.Frame(main_frame)
+    table_frame = ttk.Frame(main_frame, padding=12, style="Card.TFrame")
     table_frame.pack(fill="both", expand=True)
 
     columns = (
@@ -693,7 +711,7 @@ def launch_welcome_window(
     vsb.pack(side="left", fill="y")
     hsb.pack(side="bottom", fill="x")
 
-    footer = ttk.Frame(main_frame)
+    footer = ttk.Frame(main_frame, style="Dashboard.TFrame")
     footer.pack(fill="x", pady=(12, 0))
 
     ttk.Button(footer, text="Apri file Excel…", command=_open_file).pack(side="left")

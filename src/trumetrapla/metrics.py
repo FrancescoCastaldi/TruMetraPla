@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
-from typing import Callable, Iterable
+from operator import attrgetter
+from typing import Callable, Iterable, Mapping, Sequence
 
 from .models import OperationRecord
 
@@ -71,6 +72,68 @@ def group_by_process(records: Iterable[OperationRecord]) -> list[EntityPerforman
 
     aggregated = _aggregate_by(records, key=lambda record: record.process)
     return _build_entity_performance(aggregated)
+
+
+def group_by_attributes(
+    records: Iterable[OperationRecord],
+    attributes: Sequence[str],
+    *,
+    display_names: Mapping[str, str] | None = None,
+) -> list[EntityPerformance]:
+    """Aggrega i KPI combinando più attributi dell'operazione.
+
+    Parameters
+    ----------
+    records:
+        Collezione di record da aggregare.
+    attributes:
+        Sequenza ordinata di nomi attributo da combinare. È richiesto almeno
+        un attributo valido.
+    display_names:
+        Etichette opzionali da utilizzare per formattare la descrizione
+        dell'entità risultante.
+    """
+
+    if not attributes:
+        raise ValueError("È necessario indicare almeno un attributo per il raggruppamento.")
+
+    getters = []
+    for name in attributes:
+        try:
+            getters.append(attrgetter(name))
+        except AttributeError as exc:  # pragma: no cover - errori di programmazione
+            raise ValueError(f"Attributo sconosciuto per il raggruppamento: {name!r}") from exc
+
+    aggregated: dict[tuple[object, ...], dict[str, float]] = defaultdict(
+        lambda: {"quantity": 0.0, "hours": 0.0}
+    )
+
+    for record in records:
+        key = tuple(getter(record) for getter in getters)
+        bucket = aggregated[key]
+        bucket["quantity"] += record.quantity
+        bucket["hours"] += record.hours
+
+    friendly_names = display_names or {}
+    performance = []
+    for key, values in aggregated.items():
+        parts = []
+        for attr_name, value in zip(attributes, key):
+            label = friendly_names.get(attr_name, attr_name.replace("_", " ").title())
+            pretty_value = value if value not in (None, "") else "-"
+            parts.append(f"{label}: {pretty_value}")
+
+        performance.append(
+            EntityPerformance(
+                entity=" • ".join(parts),
+                total_quantity=int(values["quantity"]),
+                total_hours=values["hours"],
+                throughput=values["quantity"] / values["hours"] if values["hours"] else 0.0,
+            )
+        )
+
+    performance.sort(key=lambda item: item.total_quantity, reverse=True)
+    return performance
 
 
 def daily_trend(records: Iterable[OperationRecord]) -> list[DailyTotals]:
