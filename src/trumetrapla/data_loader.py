@@ -14,7 +14,7 @@ _CANONICAL_FIELDS = ("date", "employee", "process", "quantity", "duration_minute
 _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "date": ("data", "date", "giorno"),
     "employee": ("dipendente", "operatore", "employee"),
-    "process": ("processo", "fase", "process"),
+    "process": ("processo", "fase", "linea", "process"),
     "quantity": (
         "quantità",
         "pezzi",
@@ -62,20 +62,18 @@ def load_operations_from_excel(
     if data_frame.empty:
         return []
 
-    resolved_columns: dict[str, str] = {}
     available_columns = list(data_frame.columns)
-    extra_aliases = {
-        field: tuple(seq)
-        for field, seq in (aliases or {}).items()
-        if field in _CANONICAL_FIELDS
-    }
+    resolved_columns, missing = suggest_column_mapping(
+        available_columns,
+        column_mapping=column_mapping,
+        aliases=aliases,
+    )
 
-    for field in _CANONICAL_FIELDS:
-        resolved_columns[field] = _resolve_column_name(
-            field,
-            available_columns,
-            column_mapping=column_mapping,
-            aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
+    if missing:
+        missing_fields = ", ".join(missing)
+        raise ColumnMappingError(
+            "Impossibile individuare tutte le colonne richieste. "
+            f"Campi mancanti: {missing_fields}."
         )
 
     normalized = data_frame.rename(
@@ -152,3 +150,45 @@ def _resolve_column_name(
 
 def _normalize_token(value: str) -> str:
     return value.strip().casefold()
+
+
+def suggest_column_mapping(
+    columns: Sequence[str],
+    *,
+    column_mapping: Mapping[str, str] | None = None,
+    aliases: Mapping[str, Sequence[str]] | None = None,
+) -> tuple[dict[str, str], tuple[str, ...]]:
+    """Suggerisce la mappatura tra i campi canonici e le colonne disponibili.
+
+    Args:
+        columns: Sequenza di intestazioni disponibili nel file Excel.
+        column_mapping: Mappatura esplicita già fornita dall'utente.
+        aliases: Alias aggiuntivi per il riconoscimento automatico.
+
+    Returns:
+        Una tupla contenente il dizionario di colonne risolte e i campi non
+        assegnati.
+    """
+
+    available_columns = list(columns)
+    extra_aliases = {
+        field: tuple(seq)
+        for field, seq in (aliases or {}).items()
+        if field in _CANONICAL_FIELDS
+    }
+
+    resolved: dict[str, str] = {}
+    missing: list[str] = []
+
+    for field in _CANONICAL_FIELDS:
+        try:
+            resolved[field] = _resolve_column_name(
+                field,
+                available_columns,
+                column_mapping=column_mapping,
+                aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
+            )
+        except ColumnMappingError:
+            missing.append(field)
+
+    return resolved, tuple(missing)
