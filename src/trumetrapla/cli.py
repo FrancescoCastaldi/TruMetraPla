@@ -7,7 +7,12 @@ from typing import Iterable
 
 import click
 
-from .data_loader import ColumnMappingError, load_operations_from_excel
+from .data_loader import (
+    ColumnMappingError,
+    OPTIONAL_FIELDS,
+    REQUIRED_FIELDS,
+    load_operations_from_excel,
+)
 from .metrics import (
     daily_trend,
     group_by_employee,
@@ -23,7 +28,8 @@ WELCOME_BANNER = r"""
 ╚══════════════════════════════════════╝
 """
 
-_CANONICAL_FIELDS = ("date", "employee", "process", "quantity", "duration_minutes")
+_CANONICAL_FIELDS = tuple(REQUIRED_FIELDS + OPTIONAL_FIELDS)
+_CANONICAL_FIELD_LIST = ", ".join(_CANONICAL_FIELDS)
 
 
 @click.group(invoke_without_command=True)
@@ -57,8 +63,9 @@ def main(ctx: click.Context, interactive: bool) -> None:
     nargs=2,
     metavar="CAMPO COLONNA",
     help=(
-        "Mappa un campo canonico (date, employee, process, quantity, duration_minutes) "
-        "alla colonna corrispondente nel file"
+        "Mappa un campo canonico ("
+        f"{_CANONICAL_FIELD_LIST}"
+        ") alla colonna corrispondente nel file"
     ),
 )
 @click.option(
@@ -93,6 +100,7 @@ def _show_welcome(interactive: bool) -> None:
     click.echo("  [2] Genera l'eseguibile standalone TruMetraPla.exe")
     click.echo("  [3] Crea l'installer automatico TruMetraPla_Setup.exe")
     click.echo("  [4] Script PowerShell e guida avanzata")
+    click.echo("  [5] Avvia l'interfaccia grafica")
     click.echo("  [0] Esci")
 
     if not interactive:
@@ -108,6 +116,8 @@ def _show_welcome(interactive: bool) -> None:
             _interactive_build_installer()
         elif choice == 4:
             _print_installer_help()
+        elif choice == 5:
+            _launch_gui_from_cli()
         elif choice == 0:
             click.echo("A presto!")
             return
@@ -200,6 +210,21 @@ def _interactive_build_installer() -> None:
 
     click.secho(f"Installer generato: {installer_path}", fg="green")
     click.echo()
+
+
+def _launch_gui_from_cli() -> None:
+    click.echo()
+    click.echo("=== Avvio interfaccia grafica ===")
+    try:
+        from .gui import GUIUnavailableError, launch_welcome_window
+    except Exception as exc:  # pragma: no cover - problemi inattesi di import
+        click.secho(f"Impossibile importare la GUI: {exc}", fg="red")
+        return
+
+    try:
+        launch_welcome_window()
+    except GUIUnavailableError as error:
+        click.secho(str(error), fg="red")
 
 
 def _prompt_column_mapping() -> dict[str, str]:
