@@ -154,8 +154,6 @@ cd TruMetraPla-linux
 
 Lo script richiede privilegi amministrativi per copiare i file nelle directory di sistema; puoi modificare le variabili `PREFIX` e `BIN_DEST` prima dell'esecuzione per installare in un percorso personalizzato.
 
-Per una guida passo-passo con tutti i comandi utili consulta la wiki in `docs/installazione-xubuntu.md`.
-
 ```bat
 installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
 ```
