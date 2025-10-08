@@ -148,18 +148,8 @@ def load_operations_from_excel(
 
     normalized = normalized.dropna(subset=["date", "employee", "process"])
 
-    canonical_columns = list(_CANONICAL_FIELDS)
-    records = [
-        OperationRecord(
-            date=row["date"],
-            employee=_coerce_text(row["employee"]),
-            process=_coerce_text(row["process"]),
-            machine=_coerce_text(row.get("machine", "")),
-            process_type=_coerce_text(row.get("process_type", "")),
-            quantity=int(row["quantity"]),
-            duration_minutes=float(row["duration_minutes"]),
-        )
-        for row in normalized[canonical_columns].to_dict(orient="records")
+    extras_columns = [
+        column for column in normalized.columns if column not in _CANONICAL_FIELDS
     ]
 
     records: list[OperationRecord] = []
