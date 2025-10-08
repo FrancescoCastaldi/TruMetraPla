@@ -8,7 +8,12 @@ from .metrics import (
     summarize_operations,
 )
 from .models import OperationRecord
-from .packaging import BuildError, build_windows_executable, build_windows_installer
+from .packaging import (
+    BuildError,
+    build_linux_bundle,
+    build_windows_executable,
+    build_windows_installer,
+)
 
 __all__ = [
     "OperationRecord",
@@ -18,6 +23,7 @@ __all__ = [
     "group_by_process",
     "daily_trend",
     "BuildError",
+    "build_linux_bundle",
     "build_windows_executable",
     "build_windows_installer",
 ]

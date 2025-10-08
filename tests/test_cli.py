@@ -43,7 +43,8 @@ def test_welcome_screen_is_printed():
     assert "TruMetraPla Suite" in result.output
     assert "Genera l'eseguibile standalone TruMetraPla.exe" in result.output
     assert "Crea l'installer automatico TruMetraPla_Setup.exe" in result.output
-    assert "Script PowerShell e guida avanzata" in result.output
+    assert "Script PowerShell/BAT e guida avanzata" in result.output
+    assert "Prepara il pacchetto Linux (Xubuntu)" in result.output
 
 
 def test_build_exe_command(monkeypatch, tmp_path):
@@ -81,3 +82,19 @@ def test_build_installer_command(monkeypatch, tmp_path):
 
     assert result.exit_code == 0
     assert f"Installer generato in: {expected_path}" in result.output
+
+
+def test_build_linux_command(monkeypatch, tmp_path):
+    expected_path = tmp_path / "TruMetraPla-linux.tar.gz"
+
+    def fake_builder(dist_path):
+        assert dist_path == tmp_path
+        return expected_path
+
+    runner = CliRunner()
+    monkeypatch.setattr("trumetrapla.cli.build_linux_bundle", fake_builder)
+
+    result = runner.invoke(main, ["build-linux", "--dist", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert f"Bundle Linux generato in: {expected_path}" in result.output
