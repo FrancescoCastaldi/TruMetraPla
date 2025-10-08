@@ -27,18 +27,19 @@ def run(argv: Sequence[str] | None = None) -> None:
     raw_args = list(args[1:])
     control_flags = {"--cli", "--no-gui", "--gui"}
     cli_args = [arg for arg in raw_args if arg not in control_flags]
+    cleaned_cli_args = _strip_module_invocation_tokens(cli_args)
 
     wants_cli = any(flag in raw_args for flag in ("--cli", "--no-gui"))
-    has_cli_subcommand = bool(cli_args)
+    has_cli_subcommand = bool(cleaned_cli_args)
 
     if wants_cli or has_cli_subcommand:
-        _run_cli(cli_args)
+        _run_cli(cleaned_cli_args)
         return
 
     try:
         launch_welcome_window()
     except GUIUnavailableError:
-        _run_cli(cli_args)
+        _run_cli(cleaned_cli_args)
 
 
 def _run_cli(arguments: Iterable[str]) -> None:

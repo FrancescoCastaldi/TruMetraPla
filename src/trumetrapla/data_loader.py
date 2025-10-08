@@ -43,8 +43,18 @@ _FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
         "responsabile",
         "worker",
         "employee",
+        "team member",
     ),
-    "process": ("processo", "fase", "linea", "operazione", "process"),
+    "process": (
+        "processo",
+        "fase",
+        "linea",
+        "operazione",
+        "attività",
+        "attivita",
+        "activity",
+        "process",
+    ),
     "machine": (
         "macchina",
         "macchinario",
@@ -53,7 +63,14 @@ _FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
         "machine",
         "equipment",
     ),
-    "process_type": ("tipo processo", "tipologia", "categoria", "category", "process type"),
+    "process_type": (
+        "tipo processo",
+        "tipologia",
+        "categoria",
+        "category",
+        "process type",
+        "classe processo",
+    ),
     "quantity": ("quantita", "quantità", "pezzi", "pieces", "quantity", "output"),
     "duration_minutes": ("durata", "min", "minuti", "minutes", "tempo"),
 }
@@ -258,9 +275,10 @@ def suggest_column_mapping(
     }
 
     resolved: dict[str, str] = {}
-    missing: list[str] = []
+    missing_required: list[str] = []
+    missing_optional: list[str] = []
 
-    for field in _CANONICAL_FIELDS:
+    for field in REQUIRED_FIELDS:
         try:
             resolved[field] = _resolve_column_name(
                 field,
@@ -269,7 +287,47 @@ def suggest_column_mapping(
                 aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
             )
         except ColumnMappingError:
-            missing.append(field)
+            missing_required.append(field)
+
+    for field in OPTIONAL_FIELDS:
+        try:
+            resolved[field] = _resolve_column_name(
+                field,
+                available_columns,
+                column_mapping=column_mapping,
+                aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
+            )
+        except ColumnMappingError:
+            missing_optional.append(field)
+
+    if not missing_required and not missing_optional:
+        return resolved, ()
+
+    samples_map = {column: (column_samples or {}).get(column, ()) for column in available_columns}
+    already_assigned = set(resolved.values())
+    still_missing_required: list[str] = []
+
+    for field in missing_required:
+        guess, _score = _COLUMN_GUESSER.guess(
+            field=field,
+            columns=samples_map,
+            already_assigned=already_assigned,
+        )
+        if guess:
+            resolved[field] = guess
+            already_assigned.add(guess)
+        else:
+            still_missing_required.append(field)
+
+    for field in missing_optional:
+        guess, _score = _COLUMN_GUESSER.guess(
+            field=field,
+            columns=samples_map,
+            already_assigned=already_assigned,
+        )
+        if guess:
+            resolved[field] = guess
+            already_assigned.add(guess)
 
     if not missing:
         return resolved, ()
