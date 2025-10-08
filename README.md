@@ -87,7 +87,7 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 ## Costruire l'eseguibile Windows
 
 1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `installer/Setup-TruMetraPla.bat`, che crea un ambiente virtuale dedicato, installa PyInstaller e — se disponibile — scarica automaticamente NSIS tramite `winget`.
-2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo o lo script `installer/Setup-TruMetraPla.bat`. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo, gli script PowerShell/BAT **oppure il nuovo file batch** `installer/Build-TruMetraPla.bat`. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
 3. (Opzionale ma consigliato) Compila l'installer grafico con `trumetrapla build-installer`. Il comando crea `TruMetraPla_Setup_<versione>.exe` pronto per l'utente finale.
 
 ### Creare l'installer automatico
@@ -112,16 +112,22 @@ Se desideri rigenerare da zero anche l'eseguibile (ignorando eventuali build pre
 ### Dove viene installato il software
 
 - **Eseguibile portabile**: il comando `trumetrapla build-exe` e lo script batch `Setup-TruMetraPla.bat` copiano l'eseguibile nella cartella di destinazione (`dist/` per impostazione predefinita). Il parametro `--dist` passato allo script consente di scegliere una directory diversa.
-- **Installer automatico**: il comando `trumetrapla build-installer` genera al volo lo script NSIS necessario e crea `TruMetraPla_Setup_<versione>.exe`, che installa l'applicazione in `C:\TruMetraPla` (variabile `INSTALL_DIR`). L'utente finale può comunque selezionare una cartella differente nella schermata "Cartella di installazione".
+- **Installer automatico**: il comando `trumetrapla build-installer` utilizza lo script `TruMetraPla-Installer.nsi` per creare `TruMetraPla_Setup_<versione>.exe`, che installa l'applicazione in `C:\TruMetraPla` (variabile `INSTALL_DIR`). Puoi modificare questo percorso aprendo lo script con un editor di testo e cambiando la variabile, oppure l'utente finale può selezionare una cartella differente nella schermata "Cartella di installazione".
 
 ### Automazione da PowerShell
 
-Per Windows è disponibile lo script `installer/Setup-TruMetraPla.bat`, che:
+Per Windows sono disponibili gli script `installer/Setup-TruMetraPla.bat` (Prompt dei comandi/PowerShell) e `installer/Build-TruMetraPla.bat` che:
 
 - crea o aggiorna un ambiente virtuale dedicato;
 - installa il progetto con le dipendenze necessarie alla build;
 - invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
 - opzionalmente compila l'installer grafico NSIS (parametro `--include-installer`, che usa `trumetrapla build-installer`).
+
+## Pacchetto Linux per Xubuntu
+
+```bat
+installer\Setup-TruMetraPla.bat --include-installer
+```
 
 ## Pacchetto Linux per Xubuntu
 
@@ -144,6 +150,12 @@ Per installare il pacchetto estrai l'archivio e lancia:
 tar -xf TruMetraPla-linux.tar.gz
 cd TruMetraPla-linux
 ./install.sh
+```
+
+Lo script richiede privilegi amministrativi per copiare i file nelle directory di sistema; puoi modificare le variabili `PREFIX` e `BIN_DEST` prima dell'esecuzione per installare in un percorso personalizzato.
+
+```bat
+installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
 ```
 
 Lo script richiede privilegi amministrativi per copiare i file nelle directory di sistema; puoi modificare le variabili `PREFIX` e `BIN_DEST` prima dell'esecuzione per installare in un percorso personalizzato.

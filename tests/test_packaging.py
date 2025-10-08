@@ -90,11 +90,7 @@ def test_build_windows_installer_invokes_nsis(monkeypatch, tmp_path):
 
     assert result == tmp_path / "TruMetraPla_Setup_0.1.0.exe"
     assert commands["makensis"][0] == "makensis"
-    assert len(commands["makensis"]) == 2
-    script_path = Path(commands["makensis"][1])
-    assert script_path.exists()
-    content = script_path.read_text(encoding="utf-8")
-    assert "OutFile" in content and "TruMetraPla.exe" in content
+    assert any("/DINPUT_EXE" in part for part in commands["makensis"])
 
 
 def test_build_linux_bundle_requires_pyinstaller(monkeypatch):

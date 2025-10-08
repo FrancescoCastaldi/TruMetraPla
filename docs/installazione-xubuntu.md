@@ -46,7 +46,12 @@ sudo ./install.sh
 - Usa `sudo -E` solo se servono permessi amministrativi nelle destinazioni scelte.
 - Se durante l'installazione delle dipendenze compare l'errore `externally-managed-environment`, assicurati di aver attivato l'ambiente virtuale prima di eseguire `pip install .[build]`.
 
-## Script inclusi
+## Automazione Windows
 
-- **Xubuntu**: esegui `installer/install-trumetrapla-xubuntu.sh` per automatizzare l'intera procedura (creazione venv, installazione dipendenze e generazione del pacchetto `.tar.gz`). Puoi passare `--dist` per cambiare la cartella di output oppure `--skip-apt` se hai già installato i prerequisiti di sistema.
-- **Windows**: utilizza `installer/Setup-TruMetraPla.bat` da Prompt dei comandi o PowerShell per preparare l'ambiente, compilare l'eseguibile e — opzionalmente — l'installer NSIS (`--include-installer`).
+Per completezza, puoi utilizzare lo script batch incluso per generare rapidamente il pacchetto Windows:
+
+```bat
+installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
+```
+
+Questo comando sfrutta l'infrastruttura di build già presente nel repository per creare gli artefatti destinati a Windows.
