@@ -20,7 +20,12 @@ from .metrics import (
     summarize_operations,
 )
 from . import __version__
-from .packaging import BuildError, build_windows_executable, build_windows_installer
+from .packaging import (
+    BuildError,
+    build_linux_bundle,
+    build_windows_executable,
+    build_windows_installer,
+)
 
 WELCOME_BANNER = r"""
 ╔══════════════════════════════════════╗
@@ -99,8 +104,9 @@ def _show_welcome(interactive: bool) -> None:
     click.echo("  [1] Genera un report da file Excel")
     click.echo("  [2] Genera l'eseguibile standalone TruMetraPla.exe")
     click.echo("  [3] Crea l'installer automatico TruMetraPla_Setup.exe")
-    click.echo("  [4] Script PowerShell e guida avanzata")
+    click.echo("  [4] Script PowerShell/BAT e guida avanzata")
     click.echo("  [5] Avvia l'interfaccia grafica")
+    click.echo("  [6] Prepara il pacchetto Linux (Xubuntu)")
     click.echo("  [0] Esci")
 
     if not interactive:
@@ -118,6 +124,8 @@ def _show_welcome(interactive: bool) -> None:
             _print_installer_help()
         elif choice == 5:
             _launch_gui_from_cli()
+        elif choice == 6:
+            _interactive_build_linux()
         elif choice == 0:
             click.echo("A presto!")
             return
@@ -212,6 +220,25 @@ def _interactive_build_installer() -> None:
     click.echo()
 
 
+def _interactive_build_linux() -> None:
+    click.echo()
+    click.echo("=== Pacchetto Linux (Xubuntu) ===")
+    dist_default = Path("dist")
+    dist_input = click.prompt(
+        "Cartella di destinazione (lascia vuoto per dist/)", default=""
+    ).strip()
+    dist_path = Path(dist_input) if dist_input else dist_default
+
+    try:
+        bundle_path = build_linux_bundle(dist_path)
+    except BuildError as error:
+        click.secho(str(error), fg="red")
+        return
+
+    click.secho(f"Pacchetto Linux generato: {bundle_path}", fg="green")
+    click.echo()
+
+
 def _launch_gui_from_cli() -> None:
     click.echo()
     click.echo("=== Avvio interfaccia grafica ===")
@@ -256,15 +283,19 @@ def _print_installer_help() -> None:
     click.echo("=== Script automatico e guida avanzata ===")
     click.echo(
         "1. Installa i requisiti di build con `pip install .[build]` oppure esegui"
-        "    `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`"
+        "    `installer\Setup-TruMetraPla.bat` per creare automaticamente l'ambiente."
     )
     click.echo(
         "2. Genera TruMetraPla.exe tramite `trumetrapla build-exe`, il menu interattivo"
-        "    o lo script PowerShell."
+        "    o gli script nella cartella `installer`."
     )
     click.echo(
-        "3. Usa `trumetrapla build-installer` o lo script PowerShell per creare"
+        "3. Usa `trumetrapla build-installer` o gli stessi script per ottenere"
         "    automaticamente TruMetraPla_Setup.exe."
+    )
+    click.echo(
+        "4. Su Xubuntu/X11 crea l'archivio installabile con `trumetrapla build-linux`"
+        "    e completa l'installazione eseguendo `install.sh`."
     )
     click.echo(
         "L'installer copia i file in `C:\\TruMetraPla` e crea collegamenti che aprono"
@@ -329,6 +360,26 @@ def build_installer(dist_path: Path, reuse_executable: bool) -> None:
         raise click.ClickException(str(error)) from error
 
     click.secho(f"Installer generato in: {installer_path}", fg="green")
+
+
+@main.command("build-linux")
+@click.option(
+    "--dist",
+    "dist_path",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=Path("dist"),
+    show_default=True,
+    help="Cartella di output per il pacchetto Linux",
+)
+def build_linux(dist_path: Path) -> None:
+    """Genera un archivio installabile per distribuzioni Ubuntu/Xubuntu."""
+
+    try:
+        bundle_path = build_linux_bundle(dist_path)
+    except BuildError as error:
+        raise click.ClickException(str(error)) from error
+
+    click.secho(f"Bundle Linux generato in: {bundle_path}", fg="green")
 
 
 def _load_records(
