@@ -439,7 +439,7 @@ def launch_welcome_window(
             raise GUIUnavailableError("Pandas richiesto per la gestione dei file Excel") from exc
 
         try:
-            preview = pd.read_excel(excel_path, sheet_name=0, nrows=0)
+            preview = pd.read_excel(excel_path, sheet_name=0, nrows=25)
         except Exception as exc:  # pragma: no cover - errori di I/O imprevisti
             messagebox.showerror(
                 "Errore di lettura",
@@ -455,7 +455,13 @@ def launch_welcome_window(
             )
             return None
 
-        suggestions, _missing = suggest_column_mapping(columns)
+        column_samples = {
+            column: preview[column].dropna().astype(str).head(12).tolist()
+            for column in columns
+        }
+        suggestions, _missing = suggest_column_mapping(
+            columns, column_samples=column_samples
+        )
         option_values = ["(Seleziona)"] + columns
 
         field_labels: dict[str, str] = {

@@ -120,10 +120,10 @@ Per Windows sono disponibili gli script `installer/Setup-TruMetraPla.bat` (Promp
 
 - crea o aggiorna un ambiente virtuale dedicato;
 - installa il progetto con le dipendenze necessarie alla build;
-- invocano `trumetrapla build-exe` con la cartella di destinazione desiderata;
-- opzionalmente compila l'installer grafico NSIS (parametro `-IncludeInstaller`, che usa `trumetrapla build-installer`).
+- invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
+- opzionalmente compila l'installer grafico NSIS (parametro `--include-installer`, che usa `trumetrapla build-installer`).
 
-Esempio di utilizzo completo:
+## Pacchetto Linux per Xubuntu
 
 ```bat
 installer\Setup-TruMetraPla.bat --include-installer
@@ -157,6 +157,12 @@ Lo script richiede privilegi amministrativi per copiare i file nelle directory d
 ```bat
 installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
 ```
+
+Lo script richiede privilegi amministrativi per copiare i file nelle directory di sistema; puoi modificare le variabili `PREFIX` e `BIN_DEST` prima dell'esecuzione per installare in un percorso personalizzato.
+
+Per una guida passo-passo con tutti i comandi utili consulta la wiki in `docs/installazione-xubuntu.md`.
+
+Se preferisci un'unica procedura automatizzata puoi usare lo script `installer/install-trumetrapla-xubuntu.sh`, che prepara la virtualenv, installa le dipendenze e avvia `trumetrapla build-linux` creando automaticamente l'archivio in `dist/` (opzione `--dist` per personalizzare la destinazione).
 
 ## Utilizzo come libreria Python
 

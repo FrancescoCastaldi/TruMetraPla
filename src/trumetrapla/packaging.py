@@ -115,12 +115,6 @@ def build_windows_installer(
             "Impossibile trovare l'eseguibile TruMetraPla.exe necessario per l'installer."
         )
 
-    script_path = Path("installer") / "TruMetraPla-Installer.nsi"
-    if not script_path.exists():
-        raise BuildError(
-            "Script NSIS non trovato. Assicurati che `installer/TruMetraPla-Installer.nsi` sia presente."
-        )
-
     stage_dir = dist_dir / "installer"
     stage_dir.mkdir(parents=True, exist_ok=True)
     staged_exe = (stage_dir / "TruMetraPla.exe").resolve()
@@ -129,13 +123,15 @@ def build_windows_installer(
     resolved_version = version or "0.0.0"
     output_path = (dist_dir / f"TruMetraPla_Setup_{resolved_version}.exe").resolve()
 
-    command = [
-        makensis_exe,
-        f"/DAPP_VERSION={resolved_version}",
-        f"/DINPUT_EXE={staged_exe}",
-        f"/DOUTPUT_FILE={output_path}",
-        str(script_path),
-    ]
+    script_content = _NSIS_TEMPLATE.format(
+        input_exe=_to_nsis_path(staged_exe),
+        output_file=_to_nsis_path(output_path),
+    )
+
+    script_path = stage_dir / "TruMetraPla-Installer.nsi"
+    script_path.write_text(script_content, encoding="utf-8")
+
+    command = [makensis_exe, str(script_path)]
 
     result = subprocess.run(
         command,

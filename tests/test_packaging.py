@@ -84,9 +84,6 @@ def test_build_windows_installer_invokes_nsis(monkeypatch, tmp_path):
     monkeypatch.setattr("subprocess.run", fake_run)
     monkeypatch.setattr("shutil.copy2", fake_copy)
 
-    script = tmp_path / "installer" / "TruMetraPla-Installer.nsi"
-    script.parent.mkdir(parents=True, exist_ok=True)
-    script.write_text("; dummy")
     monkeypatch.chdir(tmp_path)
 
     result = build_windows_installer(tmp_path, version="0.1.0", reuse_executable=False)

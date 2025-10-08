@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-import re
 from pathlib import Path
 
 import pandas as pd
 
+from .column_classifier import build_default_guesser
 from .models import OperationRecord
 
 REQUIRED_FIELDS = (
@@ -59,6 +59,9 @@ _FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 
+_COLUMN_GUESSER = build_default_guesser()
+
+
 class ColumnMappingError(ValueError):
     """Errore sollevato quando le colonne richieste non sono presenti."""
 
@@ -107,10 +110,16 @@ def load_operations_from_excel(
         return []
 
     available_columns = list(data_frame.columns)
+    preview = data_frame.head(25)
+    column_samples: dict[str, list[str]] = {}
+    for column in available_columns:
+        samples = preview[column].dropna().astype(str).head(12).tolist()
+        column_samples[column] = samples
     resolved_columns, missing = suggest_column_mapping(
         available_columns,
         column_mapping=column_mapping,
         aliases=aliases,
+        column_samples=column_samples,
     )
 
     if missing:
@@ -227,6 +236,7 @@ def suggest_column_mapping(
     *,
     column_mapping: Mapping[str, str] | None = None,
     aliases: Mapping[str, Sequence[str]] | None = None,
+    column_samples: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[dict[str, str], tuple[str, ...]]:
     """Suggerisce la mappatura tra i campi canonici e le colonne disponibili.
 
@@ -261,4 +271,23 @@ def suggest_column_mapping(
         except ColumnMappingError:
             missing.append(field)
 
-    return resolved, tuple(missing)
+    if not missing:
+        return resolved, ()
+
+    samples_map = {column: (column_samples or {}).get(column, ()) for column in available_columns}
+    already_assigned = set(resolved.values())
+    still_missing: list[str] = []
+
+    for field in missing:
+        guess, _score = _COLUMN_GUESSER.guess(
+            field=field,
+            columns=samples_map,
+            already_assigned=already_assigned,
+        )
+        if guess:
+            resolved[field] = guess
+            already_assigned.add(guess)
+        else:
+            still_missing.append(field)
+
+    return resolved, tuple(still_missing)
