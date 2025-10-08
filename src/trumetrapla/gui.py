@@ -335,20 +335,21 @@ def launch_welcome_window(
         tree.delete(*tree.get_children())
         columns = _active_columns()
         for record in records:
-            tree.insert(
-                "",
-                "end",
-                values=(
-                    record.date.strftime("%d/%m/%Y"),
-                    record.employee,
-                    record.process,
-                    record.process_type or "-",
-                    record.machine or "-",
-                    f"{record.quantity}",
-                    f"{record.duration_minutes:.1f}",
-                    f"{record.productivity_per_hour:.2f}",
-                ),
-            )
+            values: list[str] = []
+            for column_id in columns:
+                spec = state.column_specs.get(column_id)
+                if spec is None:
+                    values.append("")
+                    continue
+                try:
+                    value = spec.getter(record)
+                except Exception:  # pragma: no cover - getter personalizzato errato
+                    value = ""
+                if not isinstance(value, str):
+                    value = "" if value is None else str(value)
+                values.append(value)
+
+            tree.insert("", "end", values=tuple(values))
 
     def _format_summary(records: list[OperationRecord]) -> str:
         if not records:
@@ -438,7 +439,7 @@ def launch_welcome_window(
             raise GUIUnavailableError("Pandas richiesto per la gestione dei file Excel") from exc
 
         try:
-            preview = pd.read_excel(excel_path, sheet_name=0, nrows=0)
+            preview = pd.read_excel(excel_path, sheet_name=0, nrows=25)
         except Exception as exc:  # pragma: no cover - errori di I/O imprevisti
             messagebox.showerror(
                 "Errore di lettura",
@@ -454,7 +455,13 @@ def launch_welcome_window(
             )
             return None
 
-        suggestions, _missing = suggest_column_mapping(columns)
+        column_samples = {
+            column: preview[column].dropna().astype(str).head(12).tolist()
+            for column in columns
+        }
+        suggestions, _missing = suggest_column_mapping(
+            columns, column_samples=column_samples
+        )
         option_values = ["(Seleziona)"] + columns
 
         field_labels: dict[str, str] = {
@@ -939,16 +946,6 @@ def launch_welcome_window(
     table_frame = ttk.Frame(main_frame, padding=12, style="Card.TFrame")
     table_frame.pack(fill="both", expand=True)
 
-    columns = (
-        "date",
-        "employee",
-        "process",
-        "process_type",
-        "machine",
-        "quantity",
-        "duration",
-        "throughput",
-    )
     tree = ttk.Treeview(
         table_frame,
         columns=tuple(state.visible_columns),
@@ -957,27 +954,6 @@ def launch_welcome_window(
         style="Tech.Treeview",
     )
 
-    headings = {
-        "date": "Data",
-        "employee": "Dipendente",
-        "process": "Processo",
-        "process_type": "Tipo processo",
-        "machine": "Macchina",
-        "quantity": "Pezzi",
-        "duration": "Durata (min)",
-        "throughput": "Pezzi/ora",
-    }
-
-    for column in columns:
-        tree.heading(column, text=headings[column])
-        anchor = "center"
-        if column in {"employee", "process", "process_type", "machine"}:
-            anchor = "w"
-        width = 140
-        if column in {"quantity", "duration", "throughput"}:
-            width = 110
-        tree.column(column, anchor=anchor, width=width)
-
     vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
     hsb = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
     tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
@@ -985,6 +961,8 @@ def launch_welcome_window(
     tree.pack(side="left", fill="both", expand=True)
     vsb.pack(side="left", fill="y")
     hsb.pack(side="bottom", fill="x")
+
+    _configure_tree_columns()
 
     footer = ttk.Frame(main_frame, style="Dashboard.TFrame")
     footer.pack(fill="x", pady=(12, 0))
