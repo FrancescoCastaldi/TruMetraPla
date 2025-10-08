@@ -174,8 +174,9 @@ def load_operations_from_excel(
 
     normalized = normalized.dropna(subset=["date", "employee", "process"])
 
+    canonical_columns = list(_CANONICAL_FIELDS)
     extras_columns = [
-        column for column in normalized.columns if column not in _CANONICAL_FIELDS
+        column for column in normalized.columns if column not in canonical_columns
     ]
 
     records: list[OperationRecord] = []
@@ -328,4 +329,23 @@ def suggest_column_mapping(
             resolved[field] = guess
             already_assigned.add(guess)
 
-    return resolved, tuple(still_missing_required)
+    if not missing:
+        return resolved, ()
+
+    samples_map = {column: (column_samples or {}).get(column, ()) for column in available_columns}
+    already_assigned = set(resolved.values())
+    still_missing: list[str] = []
+
+    for field in missing:
+        guess, _score = _COLUMN_GUESSER.guess(
+            field=field,
+            columns=samples_map,
+            already_assigned=already_assigned,
+        )
+        if guess:
+            resolved[field] = guess
+            already_assigned.add(guess)
+        else:
+            still_missing.append(field)
+
+    return resolved, tuple(still_missing)

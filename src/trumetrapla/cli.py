@@ -287,16 +287,15 @@ def _print_installer_help() -> None:
     )
     click.echo(
         "2. Genera TruMetraPla.exe tramite `trumetrapla build-exe`, il menu interattivo"
-        "    o lo script `installer\\Setup-TruMetraPla.bat`."
+        "    o gli script nella cartella `installer`."
     )
     click.echo(
-        "3. Usa `trumetrapla build-installer` oppure aggiungi `--include-installer`"
-        "    allo script batch per ottenere automaticamente TruMetraPla_Setup.exe."
+        "3. Usa `trumetrapla build-installer` o gli stessi script per ottenere"
+        "    automaticamente TruMetraPla_Setup.exe."
     )
     click.echo(
         "4. Su Xubuntu/X11 crea l'archivio installabile con `trumetrapla build-linux`"
-        "    oppure lancia `installer/install-trumetrapla-xubuntu.sh` e completa"
-        "    l'installazione eseguendo `install.sh`."
+        "    e completa l'installazione eseguendo `install.sh`."
     )
     click.echo(
         "L'installer copia i file in `C:\\TruMetraPla` e crea collegamenti che aprono"

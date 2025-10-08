@@ -9,53 +9,6 @@ import tarfile
 from pathlib import Path
 from textwrap import dedent
 
-_NSIS_TEMPLATE = dedent(
-    r"""
-    !include "MUI2.nsh"
-
-    Name "TruMetraPla"
-    OutFile "{output_file}"
-    InstallDir "$PROGRAMFILES64\\TruMetraPla"
-    RequestExecutionLevel admin
-
-    !define MUI_ABORTWARNING
-
-    !insertmacro MUI_PAGE_WELCOME
-    !insertmacro MUI_PAGE_DIRECTORY
-    !insertmacro MUI_PAGE_INSTFILES
-    !insertmacro MUI_PAGE_FINISH
-
-    !insertmacro MUI_UNPAGE_CONFIRM
-    !insertmacro MUI_UNPAGE_INSTFILES
-
-    !insertmacro MUI_LANGUAGE "Italian"
-
-    Section "Install"
-        SetOutPath "$INSTDIR"
-        File "/oname=TruMetraPla.exe" "{input_exe}"
-        WriteUninstaller "$INSTDIR\\Uninstall.exe"
-        CreateShortCut "$DESKTOP\\TruMetraPla.lnk" "$INSTDIR\\TruMetraPla.exe"
-        CreateDirectory "$SMPROGRAMS\\TruMetraPla"
-        CreateShortCut "$SMPROGRAMS\\TruMetraPla\\TruMetraPla.lnk" "$INSTDIR\\TruMetraPla.exe"
-        CreateShortCut "$SMPROGRAMS\\TruMetraPla\\Disinstalla.lnk" "$INSTDIR\\Uninstall.exe"
-    SectionEnd
-
-    Section "Uninstall"
-        Delete "$DESKTOP\\TruMetraPla.lnk"
-        Delete "$SMPROGRAMS\\TruMetraPla\\TruMetraPla.lnk"
-        Delete "$SMPROGRAMS\\TruMetraPla\\Disinstalla.lnk"
-        RMDir "$SMPROGRAMS\\TruMetraPla"
-        Delete "$INSTDIR\\TruMetraPla.exe"
-        Delete "$INSTDIR\\Uninstall.exe"
-        RMDir "$INSTDIR"
-    SectionEnd
-    """
-)
-
-
-def _to_nsis_path(path: Path) -> str:
-    return str(path).replace("/", "\\").replace("\\", "\\\\")
-
 
 class BuildError(RuntimeError):
     """Errore sollevato quando la generazione dell'eseguibile fallisce."""
