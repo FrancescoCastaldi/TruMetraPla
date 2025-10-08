@@ -117,3 +117,43 @@ def test_suggest_column_mapping_returns_resolved_headers():
     assert resolved["process"] == "Linea"
     assert resolved["quantity"] == "Pezzi prodotti"
     assert resolved["duration_minutes"] == "Durata (min)"
+
+
+def test_auto_mapping_works_with_unconventional_headers(tmp_path):
+    frame = pd.DataFrame(
+        [
+            {
+                "Giorno registrazione": "2024/03/05",
+                "Team member": "Giulia Neri",
+                "Attività svolta": "Controllo qualità",
+                "Postazione": "Area QA",
+                "Classe processo": "Verifica",
+                "Tot output": 64,
+                "Tempo lavorato": 52,
+            },
+            {
+                "Giorno registrazione": "2024/03/06",
+                "Team member": "Luca Blu",
+                "Attività svolta": "Imballaggio",
+                "Postazione": "Magazzino",
+                "Classe processo": "Logistica",
+                "Tot output": 48,
+                "Tempo lavorato": 47,
+            },
+        ]
+    )
+
+    excel_path = tmp_path / "unconventional.xlsx"
+    frame.to_excel(excel_path, index=False)
+
+    records = load_operations_from_excel(excel_path)
+
+    assert len(records) == 2
+    assert {record.employee for record in records} == {"Giulia Neri", "Luca Blu"}
+    assert {record.process for record in records} == {
+        "Controllo qualità",
+        "Imballaggio",
+    }
+    assert {record.process_type for record in records} == {"Verifica", "Logistica"}
+    assert records[0].quantity == 64
+    assert pytest.approx(records[0].duration_minutes, rel=1e-3) == 52

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-import re
 from pathlib import Path
 
 import pandas as pd
 
+from .column_classifier import build_default_guesser
 from .models import OperationRecord
 
 REQUIRED_FIELDS = (
@@ -43,8 +43,18 @@ _FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
         "responsabile",
         "worker",
         "employee",
+        "team member",
     ),
-    "process": ("processo", "fase", "linea", "operazione", "process"),
+    "process": (
+        "processo",
+        "fase",
+        "linea",
+        "operazione",
+        "attività",
+        "attivita",
+        "activity",
+        "process",
+    ),
     "machine": (
         "macchina",
         "macchinario",
@@ -53,10 +63,20 @@ _FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
         "machine",
         "equipment",
     ),
-    "process_type": ("tipo processo", "tipologia", "categoria", "category", "process type"),
+    "process_type": (
+        "tipo processo",
+        "tipologia",
+        "categoria",
+        "category",
+        "process type",
+        "classe processo",
+    ),
     "quantity": ("quantita", "quantità", "pezzi", "pieces", "quantity", "output"),
     "duration_minutes": ("durata", "min", "minuti", "minutes", "tempo"),
 }
+
+
+_COLUMN_GUESSER = build_default_guesser()
 
 
 class ColumnMappingError(ValueError):
@@ -107,10 +127,16 @@ def load_operations_from_excel(
         return []
 
     available_columns = list(data_frame.columns)
+    preview = data_frame.head(25)
+    column_samples: dict[str, list[str]] = {}
+    for column in available_columns:
+        samples = preview[column].dropna().astype(str).head(12).tolist()
+        column_samples[column] = samples
     resolved_columns, missing = suggest_column_mapping(
         available_columns,
         column_mapping=column_mapping,
         aliases=aliases,
+        column_samples=column_samples,
     )
 
     if missing:
@@ -148,18 +174,8 @@ def load_operations_from_excel(
 
     normalized = normalized.dropna(subset=["date", "employee", "process"])
 
-    canonical_columns = list(_CANONICAL_FIELDS)
-    records = [
-        OperationRecord(
-            date=row["date"],
-            employee=_coerce_text(row["employee"]),
-            process=_coerce_text(row["process"]),
-            machine=_coerce_text(row.get("machine", "")),
-            process_type=_coerce_text(row.get("process_type", "")),
-            quantity=int(row["quantity"]),
-            duration_minutes=float(row["duration_minutes"]),
-        )
-        for row in normalized[canonical_columns].to_dict(orient="records")
+    extras_columns = [
+        column for column in normalized.columns if column not in _CANONICAL_FIELDS
     ]
 
     records: list[OperationRecord] = []
@@ -236,6 +252,7 @@ def suggest_column_mapping(
     *,
     column_mapping: Mapping[str, str] | None = None,
     aliases: Mapping[str, Sequence[str]] | None = None,
+    column_samples: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[dict[str, str], tuple[str, ...]]:
     """Suggerisce la mappatura tra i campi canonici e le colonne disponibili.
 
@@ -257,9 +274,10 @@ def suggest_column_mapping(
     }
 
     resolved: dict[str, str] = {}
-    missing: list[str] = []
+    missing_required: list[str] = []
+    missing_optional: list[str] = []
 
-    for field in _CANONICAL_FIELDS:
+    for field in REQUIRED_FIELDS:
         try:
             resolved[field] = _resolve_column_name(
                 field,
@@ -268,6 +286,46 @@ def suggest_column_mapping(
                 aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
             )
         except ColumnMappingError:
-            missing.append(field)
+            missing_required.append(field)
 
-    return resolved, tuple(missing)
+    for field in OPTIONAL_FIELDS:
+        try:
+            resolved[field] = _resolve_column_name(
+                field,
+                available_columns,
+                column_mapping=column_mapping,
+                aliases=_DEFAULT_COLUMN_ALIASES | extra_aliases,
+            )
+        except ColumnMappingError:
+            missing_optional.append(field)
+
+    if not missing_required and not missing_optional:
+        return resolved, ()
+
+    samples_map = {column: (column_samples or {}).get(column, ()) for column in available_columns}
+    already_assigned = set(resolved.values())
+    still_missing_required: list[str] = []
+
+    for field in missing_required:
+        guess, _score = _COLUMN_GUESSER.guess(
+            field=field,
+            columns=samples_map,
+            already_assigned=already_assigned,
+        )
+        if guess:
+            resolved[field] = guess
+            already_assigned.add(guess)
+        else:
+            still_missing_required.append(field)
+
+    for field in missing_optional:
+        guess, _score = _COLUMN_GUESSER.guess(
+            field=field,
+            columns=samples_map,
+            already_assigned=already_assigned,
+        )
+        if guess:
+            resolved[field] = guess
+            already_assigned.add(guess)
+
+    return resolved, tuple(still_missing_required)

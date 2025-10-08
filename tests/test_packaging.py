@@ -1,10 +1,12 @@
 import shutil
+import tarfile
 from pathlib import Path
 
 import pytest
 
 from trumetrapla.packaging import (
     BuildError,
+    build_linux_bundle,
     build_windows_executable,
     build_windows_installer,
 )
@@ -82,13 +84,53 @@ def test_build_windows_installer_invokes_nsis(monkeypatch, tmp_path):
     monkeypatch.setattr("subprocess.run", fake_run)
     monkeypatch.setattr("shutil.copy2", fake_copy)
 
-    script = tmp_path / "installer" / "TruMetraPla-Installer.nsi"
-    script.parent.mkdir(parents=True, exist_ok=True)
-    script.write_text("; dummy")
     monkeypatch.chdir(tmp_path)
 
     result = build_windows_installer(tmp_path, version="0.1.0", reuse_executable=False)
 
     assert result == tmp_path / "TruMetraPla_Setup_0.1.0.exe"
     assert commands["makensis"][0] == "makensis"
-    assert any("/DINPUT_EXE" in part for part in commands["makensis"])
+    assert len(commands["makensis"]) == 2
+    script_path = Path(commands["makensis"][1])
+    assert script_path.exists()
+    content = script_path.read_text(encoding="utf-8")
+    assert "OutFile" in content and "TruMetraPla.exe" in content
+
+
+def test_build_linux_bundle_requires_pyinstaller(monkeypatch):
+    monkeypatch.setattr(shutil, "which", lambda _: None)
+
+    with pytest.raises(BuildError):
+        build_linux_bundle()
+
+
+def test_build_linux_bundle_creates_tarball(monkeypatch, tmp_path):
+    def fake_which(name):
+        if name == "pyinstaller":
+            return "pyinstaller"
+        return None
+
+    def fake_run(command, check, text, capture_output, env):
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        dist_index = command.index("--distpath") + 1
+        binary_path = Path(command[dist_index]) / "TruMetraPla"
+        binary_path.parent.mkdir(parents=True, exist_ok=True)
+        binary_path.write_bytes(b"binary")
+        return Result()
+
+    monkeypatch.setattr("shutil.which", fake_which)
+    monkeypatch.setattr("subprocess.run", fake_run)
+    monkeypatch.chdir(tmp_path)
+
+    result = build_linux_bundle(tmp_path)
+
+    assert result == tmp_path / "TruMetraPla-linux.tar.gz"
+    assert result.exists()
+
+    with tarfile.open(result, "r:gz") as archive:
+        names = archive.getnames()
+        assert "TruMetraPla-linux/install.sh" in names

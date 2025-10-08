@@ -6,6 +6,7 @@ Strumento desktop e CLI per analizzare dati di produzione da Excel, calcolare KP
 - **Installazione**: `pip install -e .[test]`
 - **Dashboard**: `trumetrapla` (oppure avvia `dist/TruMetraPla.exe` dopo il build)
 - **Report CLI**: `trumetrapla report produzione.xlsx`
+- **Pacchetto Linux**: `trumetrapla build-linux`
 
 - Import automatico di file Excel con riconoscimento delle intestazioni italiane e inglesi.
 - Calcolo dei principali indicatori: pezzi prodotti, ore lavorate, produttività media.
@@ -29,7 +30,7 @@ Per creare ed eseguire l'installer Windows assicurati di avere a disposizione:
 
 1. **Sistema operativo**: Windows 10 o Windows 11 a 64 bit con tutti gli aggiornamenti recenti.
 2. **Python**: versione 3.11 o superiore installata dal [Microsoft Store](https://www.microsoft.com/store/productId/9PJPW5LDXLZ5) oppure dal sito ufficiale, con l'opzione "Aggiungi Python al PATH" abilitata.
-3. **PowerShell**: versione 5.1 o PowerShell 7+ per poter eseguire lo script `installer/Setup-TruMetraPla.ps1`.
+3. **Prompt dei comandi/PowerShell**: per eseguire lo script `installer/Setup-TruMetraPla.bat`, che crea automaticamente l'ambiente virtuale e installa i componenti necessari.
 4. **Strumenti di compilazione**: Microsoft Visual C++ Build Tools o un'installazione recente di Visual Studio con il carico di lavoro "Sviluppo desktop con C++" per garantire la disponibilità dei compilatori necessari a PyInstaller.
 5. **Dipendenze Python**: pacchetti elencati nell'extra `build` (`pip install .[build]`), che includono PyInstaller.
 6. **NSIS (opzionale)**: se desideri generare anche l'installer grafico, installa [Nullsoft Scriptable Install System](https://nsis.sourceforge.io/Download).
@@ -85,8 +86,8 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 
 ## Costruire l'eseguibile Windows
 
-1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1`.
-2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo, lo script PowerShell **oppure il nuovo file batch** `installer/Build-TruMetraPla.bat`. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
+1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `installer/Setup-TruMetraPla.bat`, che crea un ambiente virtuale dedicato, installa PyInstaller e — se disponibile — scarica automaticamente NSIS tramite `winget`.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo o lo script `installer/Setup-TruMetraPla.bat`. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
 3. (Opzionale ma consigliato) Compila l'installer grafico con `trumetrapla build-installer`. Il comando crea `TruMetraPla_Setup_<versione>.exe` pronto per l'utente finale.
 
 ### Creare l'installer automatico
@@ -110,27 +111,46 @@ Se desideri rigenerare da zero anche l'eseguibile (ignorando eventuali build pre
 
 ### Dove viene installato il software
 
-- **Eseguibile portabile**: il comando `trumetrapla build-exe` e lo script `Setup-TruMetraPla.ps1` copiano l'eseguibile nella cartella di destinazione (`dist/` per impostazione predefinita). Il parametro `-Output` dello script PowerShell permette di scegliere una directory diversa.
-- **Installer automatico**: il comando `trumetrapla build-installer` utilizza lo script `TruMetraPla-Installer.nsi` per creare `TruMetraPla_Setup_<versione>.exe`, che installa l'applicazione in `C:\TruMetraPla` (variabile `INSTALL_DIR`). Puoi modificare questo percorso aprendo lo script con un editor di testo e cambiando la variabile, oppure l'utente finale può selezionare una cartella differente nella schermata "Cartella di installazione".
+- **Eseguibile portabile**: il comando `trumetrapla build-exe` e lo script batch `Setup-TruMetraPla.bat` copiano l'eseguibile nella cartella di destinazione (`dist/` per impostazione predefinita). Il parametro `--dist` passato allo script consente di scegliere una directory diversa.
+- **Installer automatico**: il comando `trumetrapla build-installer` genera al volo lo script NSIS necessario e crea `TruMetraPla_Setup_<versione>.exe`, che installa l'applicazione in `C:\TruMetraPla` (variabile `INSTALL_DIR`). L'utente finale può comunque selezionare una cartella differente nella schermata "Cartella di installazione".
 
 ### Automazione da PowerShell
 
-Per Windows sono disponibili gli script `installer/Setup-TruMetraPla.ps1` (PowerShell) e `installer/Build-TruMetraPla.bat` (Prompt dei comandi) che:
+Per Windows è disponibile lo script `installer/Setup-TruMetraPla.bat`, che:
 
 - crea o aggiorna un ambiente virtuale dedicato;
 - installa il progetto con le dipendenze necessarie alla build;
-- invocano `trumetrapla build-exe` con la cartella di destinazione desiderata;
-- opzionalmente compila l'installer grafico NSIS (parametro `-IncludeInstaller`, che usa `trumetrapla build-installer`).
+- invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
+- opzionalmente compila l'installer grafico NSIS (parametro `--include-installer`, che usa `trumetrapla build-installer`).
 
-Esempio di utilizzo completo:
+## Pacchetto Linux per Xubuntu
 
-```powershell
-powershell -ExecutionPolicy Bypass -File installer/Setup-TruMetraPla.ps1 -IncludeInstaller
+Su Xubuntu (e in generale sulle distribuzioni basate su Ubuntu 22.04+) puoi generare un archivio installabile tramite PyInstaller eseguendo:
+
+```bash
+pip install .[build]
+trumetrapla build-linux
 ```
 
-```bat
-installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
+Il comando produce `dist/TruMetraPla-linux.tar.gz` con:
+
+- `bin/trumetrapla`: binario standalone creato da PyInstaller.
+- `install.sh`: script che copia il programma in `/opt/trumetrapla`, crea il collegamento simbolico `trumetrapla` in `/usr/local/bin` e registra il file desktop (se `desktop-file-install` è disponibile).
+- `trumetrapla.desktop`: voce `.desktop` pronta per l'integrazione nel menu delle applicazioni.
+
+Per installare il pacchetto estrai l'archivio e lancia:
+
+```bash
+tar -xf TruMetraPla-linux.tar.gz
+cd TruMetraPla-linux
+./install.sh
 ```
+
+Lo script richiede privilegi amministrativi per copiare i file nelle directory di sistema; puoi modificare le variabili `PREFIX` e `BIN_DEST` prima dell'esecuzione per installare in un percorso personalizzato.
+
+Per una guida passo-passo con tutti i comandi utili consulta la wiki in `docs/installazione-xubuntu.md`.
+
+Se preferisci un'unica procedura automatizzata puoi usare lo script `installer/install-trumetrapla-xubuntu.sh`, che prepara la virtualenv, installa le dipendenze e avvia `trumetrapla build-linux` creando automaticamente l'archivio in `dist/` (opzione `--dist` per personalizzare la destinazione).
 
 ## Utilizzo come libreria Python
 
