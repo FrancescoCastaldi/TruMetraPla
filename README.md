@@ -160,7 +160,7 @@ Lo script richiede privilegi amministrativi per copiare i file nelle directory d
 
 Per una guida passo-passo con tutti i comandi utili consulta la wiki in `docs/installazione-xubuntu.md`.
 
-Se preferisci un'unica procedura automatizzata puoi usare lo script `installer/install-trumetrapla-xubuntu.sh`, che prepara la virtualenv, installa le dipendenze e avvia `trumetrapla build-linux` creando automaticamente l'archivio in `dist/` (opzione `--dist` per personalizzare la destinazione).
+Se preferisci un'unica procedura automatizzata puoi usare lo script `installer/install-trumetrapla-xubuntu.sh`, che prepara la virtualenv, installa le dipendenze e avvia `trumetrapla build-linux` creando automaticamente l'archivio in `dist/` (opzione `--dist` per personalizzare la destinazione). Lo script verifica la presenza di `apt`: sulle distribuzioni non basate su Debian (es. macOS) l'installazione dei pacchetti di sistema viene automaticamente saltata e viene mostrato un messaggio che ricorda di installare manualmente `python3-venv`, `python3-full` e `desktop-file-utils` oppure di usare l'opzione `--skip-apt`.
 
 ## Utilizzo come libreria Python
 
