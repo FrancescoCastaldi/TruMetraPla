@@ -11,7 +11,7 @@ Strumento desktop e CLI per analizzare dati di produzione da Excel, calcolare KP
 - Import automatico di file Excel con riconoscimento delle intestazioni italiane e inglesi.
 - Calcolo dei principali indicatori: pezzi prodotti, ore lavorate, produttività media.
 - Aggregazioni per dipendente, processo e giorno con ordinamento per produttività.
-- Consolle grafica moderna con menu a tendina, filtri, tabella interattiva e grafico a torta per analizzare i file Excel.
+- Consolle grafica futuristica con gradienti neon, filtri dinamici, tabella interattiva e grafico a torta per analizzare i file Excel.
 - Eseguibile Windows che apre una dashboard desktop con caricamento file guidato e riepiloghi KPI.
 
 ## Dashboard
@@ -59,8 +59,8 @@ La schermata principale offre:
 
 - **Menu File** con la voce *Apri file Excel…* per selezionare il file da importare.
 - **Filtri a tendina** per isolare rapidamente un singolo dipendente o processo produttivo.
-- **Tabella interattiva** con le colonne normalizzate (data, dipendente, processo, pezzi, durata e produttività oraria).
-- **Pulsanti "Mostra KPI" e "Grafico a torta"** per aprire rispettivamente il riepilogo numerico e la distribuzione visiva dei pezzi prodotti.
+- **Tabella interattiva** con le colonne normalizzate (data, dipendente, processo, pezzi, durata e produttività oraria) immersa in una cornice neon.
+- **Pulsanti "Mostra KPI" e "Grafico a torta"** per aprire rispettivamente il riepilogo numerico e la distribuzione visiva dei pezzi prodotti, con una barra di stato aggiornata in tempo reale.
 
 Al caricamento viene aggiornato lo stato nella barra inferiore, insieme al riepilogo dei totali (pezzi, ore, throughput e numero di dipendenti/processi). In assenza del runtime grafico Windows, l'applicazione ripiega automaticamente sulla CLI.
 
@@ -87,7 +87,7 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 ## Costruire l'eseguibile Windows
 
 1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `installer/Setup-TruMetraPla.bat`, che crea un ambiente virtuale dedicato, installa PyInstaller e — se disponibile — scarica automaticamente NSIS tramite `winget`.
-2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo, gli script PowerShell/BAT **oppure il nuovo file batch** `installer/Build-TruMetraPla.bat`. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo o gli script PowerShell/BAT. Il nuovo `installer/Build-TruMetraPla.bat` riutilizza automaticamente l'ambiente creato da `Setup-TruMetraPla.bat` e può essere invocato anche da una cartella diversa dal repository. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
 3. (Opzionale ma consigliato) Compila l'installer grafico con `trumetrapla build-installer`. Il comando crea `TruMetraPla_Setup_<versione>.exe` pronto per l'utente finale.
 
 ### Creare l'installer automatico
@@ -116,17 +116,15 @@ Se desideri rigenerare da zero anche l'eseguibile (ignorando eventuali build pre
 
 ### Automazione da PowerShell
 
-Per Windows sono disponibili gli script `installer/Setup-TruMetraPla.bat` (Prompt dei comandi/PowerShell) e `installer/Build-TruMetraPla.bat` che:
+Per Windows sono disponibili due script complementari:
 
-- crea o aggiorna un ambiente virtuale dedicato;
-- installa il progetto con le dipendenze necessarie alla build;
-- invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
-- opzionalmente compila l'installer grafico NSIS (parametro `--include-installer`, che usa `trumetrapla build-installer`).
+- `installer/Setup-TruMetraPla.bat`: crea o aggiorna un ambiente virtuale dedicato, installa il progetto con le dipendenze necessarie alla build e (se richiesto) installa NSIS.
+- `installer/Build-TruMetraPla.bat`: riutilizza automaticamente l'ambiente `.venv-trumetrapla-build` generato dal setup, lancia `trumetrapla build-exe` con gli argomenti desiderati e, con l'opzione `--include-installer`, richiama anche `trumetrapla build-installer`.
 
-## Pacchetto Linux per Xubuntu
+Esempio rapido per generare eseguibile e installer da Windows:
 
 ```bat
-installer\Setup-TruMetraPla.bat --include-installer
+installer\Build-TruMetraPla.bat --include-installer
 ```
 
 ## Pacchetto Linux per Xubuntu
@@ -162,7 +160,7 @@ Lo script richiede privilegi amministrativi per copiare i file nelle directory d
 
 Per una guida passo-passo con tutti i comandi utili consulta la wiki in `docs/installazione-xubuntu.md`.
 
-Se preferisci un'unica procedura automatizzata puoi usare lo script `installer/install-trumetrapla-xubuntu.sh`, che prepara la virtualenv, installa le dipendenze e avvia `trumetrapla build-linux` creando automaticamente l'archivio in `dist/` (opzione `--dist` per personalizzare la destinazione).
+Se preferisci un'unica procedura automatizzata puoi usare lo script `installer/install-trumetrapla-xubuntu.sh`, che prepara la virtualenv, installa le dipendenze e avvia `trumetrapla build-linux` creando automaticamente l'archivio in `dist/` (opzione `--dist` per personalizzare la destinazione). Lo script verifica la presenza di `apt`: sulle distribuzioni non basate su Debian (es. macOS) l'installazione dei pacchetti di sistema viene automaticamente saltata e viene mostrato un messaggio che ricorda di installare manualmente `python3-venv`, `python3-full` e `desktop-file-utils` oppure di usare l'opzione `--skip-apt`.
 
 ## Utilizzo come libreria Python
 

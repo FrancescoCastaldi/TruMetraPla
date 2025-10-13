@@ -43,10 +43,15 @@ log() {
 }
 
 if [[ $RUN_APT -eq 1 ]]; then
-    log "Aggiornamento indici APT"
-    sudo apt update
-    log "Installazione pacchetti di sistema"
-    sudo apt install -y python3-venv python3-full desktop-file-utils
+    if command -v apt >/dev/null 2>&1; then
+        log "Aggiornamento indici APT"
+        sudo apt update
+        log "Installazione pacchetti di sistema"
+        sudo apt install -y python3-venv python3-full desktop-file-utils
+    else
+        log "APT non disponibile su questo sistema: salto installazione pacchetti"
+        log "Installa manualmente python3-venv, python3-full e desktop-file-utils oppure usa --skip-apt"
+    fi
 else
     log "Skip installazione pacchetti di sistema"
 fi

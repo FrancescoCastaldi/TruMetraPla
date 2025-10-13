@@ -10,6 +10,34 @@ from pathlib import Path
 from textwrap import dedent
 
 
+_PACKAGE_ROOT = Path(__file__).resolve().parent
+_APP_ENTRYPOINT = _PACKAGE_ROOT / "welcome_app.py"
+
+
+_NSIS_TEMPLATE = (
+    dedent(
+        """
+        !include "MUI2.nsh"
+
+        OutFile "${OUTPUT_FILE}"
+        InstallDir "$PROGRAMFILES\\TruMetraPla"
+
+        Page directory
+        Page instfiles
+
+        Section "TruMetraPla"
+            SetOutPath "$INSTDIR"
+            File "${INPUT_EXE}"
+            CreateShortCut "$DESKTOP\\TruMetraPla.lnk" "$INSTDIR\\TruMetraPla.exe"
+            CreateDirectory "$SMPROGRAMS\\TruMetraPla"
+            CreateShortCut "$SMPROGRAMS\\TruMetraPla\\TruMetraPla.lnk" "$INSTDIR\\TruMetraPla.exe"
+        SectionEnd
+        """
+    ).strip()
+    + "\n"
+)
+
+
 class BuildError(RuntimeError):
     """Errore sollevato quando la generazione dell'eseguibile fallisce."""
 
@@ -28,6 +56,11 @@ def build_windows_executable(
             "PyInstaller non è disponibile. Installa i requisiti con `pip install .[build]`."
         )
 
+    if not _APP_ENTRYPOINT.exists():
+        raise BuildError(
+            "Impossibile trovare l'entrypoint grafico di TruMetraPla. Reinstalla il pacchetto."
+        )
+
     dist_dir = Path(dist_path) if dist_path else Path("dist")
     work_dir = Path("build") / "pyinstaller"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -35,7 +68,7 @@ def build_windows_executable(
 
     command = [
         pyinstaller_exe,
-        "src/trumetrapla/welcome_app.py",
+        str(_APP_ENTRYPOINT),
         "--name",
         "TruMetraPla",
         "--noconfirm",
@@ -123,15 +156,17 @@ def build_windows_installer(
     resolved_version = version or "0.0.0"
     output_path = (dist_dir / f"TruMetraPla_Setup_{resolved_version}.exe").resolve()
 
-    script_content = _NSIS_TEMPLATE.format(
-        input_exe=_to_nsis_path(staged_exe),
-        output_file=_to_nsis_path(output_path),
-    )
+    script_content = _NSIS_TEMPLATE
 
     script_path = stage_dir / "TruMetraPla-Installer.nsi"
     script_path.write_text(script_content, encoding="utf-8")
 
-    command = [makensis_exe, str(script_path)]
+    command = [
+        makensis_exe,
+        f"/DINPUT_EXE={_to_nsis_path(staged_exe)}",
+        f"/DOUTPUT_FILE={_to_nsis_path(output_path)}",
+        str(script_path),
+    ]
 
     result = subprocess.run(
         command,
@@ -160,6 +195,11 @@ def build_linux_bundle(
             "PyInstaller non è disponibile. Installa i prerequisiti con `pip install .[build]`."
         )
 
+    if not _APP_ENTRYPOINT.exists():
+        raise BuildError(
+            "Impossibile trovare l'entrypoint grafico di TruMetraPla. Reinstalla il pacchetto."
+        )
+
     dist_dir = Path(dist_path) if dist_path else Path("dist")
     dist_dir.mkdir(parents=True, exist_ok=True)
 
@@ -173,7 +213,7 @@ def build_linux_bundle(
 
     command = [
         pyinstaller_exe,
-        "src/trumetrapla/welcome_app.py",
+        str(_APP_ENTRYPOINT),
         "--name",
         "TruMetraPla",
         "--noconfirm",
@@ -284,4 +324,10 @@ def build_linux_bundle(
         archive.add(bundle_root, arcname=bundle_root.name)
 
     return tarball_path
+
+
+def _to_nsis_path(path: Path) -> str:
+    """Converte un percorso in formato compatibile con gli script NSIS."""
+
+    return str(path).replace("/", "\\")
 

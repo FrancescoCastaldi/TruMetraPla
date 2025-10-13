@@ -303,9 +303,13 @@ def suggest_column_mapping(
     if not missing_required and not missing_optional:
         return resolved, ()
 
-    samples_map = {column: (column_samples or {}).get(column, ()) for column in available_columns}
+    samples_map = {
+        column: (column_samples or {}).get(column, ()) for column in available_columns
+    }
     already_assigned = set(resolved.values())
+
     still_missing_required: list[str] = []
+    still_missing_optional: list[str] = []
 
     for field in missing_required:
         guess, _score = _COLUMN_GUESSER.guess(
@@ -328,24 +332,8 @@ def suggest_column_mapping(
         if guess:
             resolved[field] = guess
             already_assigned.add(guess)
-
-    if not missing:
-        return resolved, ()
-
-    samples_map = {column: (column_samples or {}).get(column, ()) for column in available_columns}
-    already_assigned = set(resolved.values())
-    still_missing: list[str] = []
-
-    for field in missing:
-        guess, _score = _COLUMN_GUESSER.guess(
-            field=field,
-            columns=samples_map,
-            already_assigned=already_assigned,
-        )
-        if guess:
-            resolved[field] = guess
-            already_assigned.add(guess)
         else:
-            still_missing.append(field)
+            still_missing_optional.append(field)
 
-    return resolved, tuple(still_missing)
+    remaining = still_missing_required
+    return resolved, tuple(remaining)
