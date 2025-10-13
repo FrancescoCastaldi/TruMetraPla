@@ -52,6 +52,11 @@ def build_windows_executable(
             "PyInstaller non è disponibile. Installa i requisiti con `pip install .[build]`."
         )
 
+    if not _APP_ENTRYPOINT.exists():
+        raise BuildError(
+            "Impossibile trovare l'entrypoint grafico di TruMetraPla. Reinstalla il pacchetto."
+        )
+
     dist_dir = Path(dist_path) if dist_path else Path("dist")
     work_dir = Path("build") / "pyinstaller"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -59,7 +64,7 @@ def build_windows_executable(
 
     command = [
         pyinstaller_exe,
-        "src/trumetrapla/welcome_app.py",
+        str(_APP_ENTRYPOINT),
         "--name",
         "TruMetraPla",
         "--noconfirm",
@@ -186,6 +191,11 @@ def build_linux_bundle(
             "PyInstaller non è disponibile. Installa i prerequisiti con `pip install .[build]`."
         )
 
+    if not _APP_ENTRYPOINT.exists():
+        raise BuildError(
+            "Impossibile trovare l'entrypoint grafico di TruMetraPla. Reinstalla il pacchetto."
+        )
+
     dist_dir = Path(dist_path) if dist_path else Path("dist")
     dist_dir.mkdir(parents=True, exist_ok=True)
 
@@ -199,7 +209,7 @@ def build_linux_bundle(
 
     command = [
         pyinstaller_exe,
-        "src/trumetrapla/welcome_app.py",
+        str(_APP_ENTRYPOINT),
         "--name",
         "TruMetraPla",
         "--noconfirm",

@@ -87,7 +87,7 @@ trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias em
 ## Costruire l'eseguibile Windows
 
 1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `installer/Setup-TruMetraPla.bat`, che crea un ambiente virtuale dedicato, installa PyInstaller e — se disponibile — scarica automaticamente NSIS tramite `winget`.
-2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo, gli script PowerShell/BAT **oppure il nuovo file batch** `installer/Build-TruMetraPla.bat`. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
+2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo o gli script PowerShell/BAT. Il nuovo `installer/Build-TruMetraPla.bat` riutilizza automaticamente l'ambiente creato da `Setup-TruMetraPla.bat` e può essere invocato anche da una cartella diversa dal repository. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
 3. (Opzionale ma consigliato) Compila l'installer grafico con `trumetrapla build-installer`. Il comando crea `TruMetraPla_Setup_<versione>.exe` pronto per l'utente finale.
 
 ### Creare l'installer automatico
@@ -116,17 +116,15 @@ Se desideri rigenerare da zero anche l'eseguibile (ignorando eventuali build pre
 
 ### Automazione da PowerShell
 
-Per Windows sono disponibili gli script `installer/Setup-TruMetraPla.bat` (Prompt dei comandi/PowerShell) e `installer/Build-TruMetraPla.bat` che:
+Per Windows sono disponibili due script complementari:
 
-- crea o aggiorna un ambiente virtuale dedicato;
-- installa il progetto con le dipendenze necessarie alla build;
-- invoca `trumetrapla build-exe` con la cartella di destinazione desiderata;
-- opzionalmente compila l'installer grafico NSIS (parametro `--include-installer`, che usa `trumetrapla build-installer`).
+- `installer/Setup-TruMetraPla.bat`: crea o aggiorna un ambiente virtuale dedicato, installa il progetto con le dipendenze necessarie alla build e (se richiesto) installa NSIS.
+- `installer/Build-TruMetraPla.bat`: riutilizza automaticamente l'ambiente `.venv-trumetrapla-build` generato dal setup, lancia `trumetrapla build-exe` con gli argomenti desiderati e, con l'opzione `--include-installer`, richiama anche `trumetrapla build-installer`.
 
-## Pacchetto Linux per Xubuntu
+Esempio rapido per generare eseguibile e installer da Windows:
 
 ```bat
-installer\Setup-TruMetraPla.bat --include-installer
+installer\Build-TruMetraPla.bat --include-installer
 ```
 
 ## Pacchetto Linux per Xubuntu
