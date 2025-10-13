@@ -10,10 +10,6 @@ from pathlib import Path
 from textwrap import dedent
 
 
-_PACKAGE_ROOT = Path(__file__).resolve().parent
-_APP_ENTRYPOINT = _PACKAGE_ROOT / "welcome_app.py"
-
-
 _NSIS_TEMPLATE = (
     dedent(
         """
