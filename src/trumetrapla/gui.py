@@ -130,6 +130,36 @@ _MATERIAL_KEYWORDS = (
 )
 
 
+def _hex_to_rgb(color: str) -> tuple[int, int, int]:
+    """Converte un colore esadecimale in una tupla RGB."""
+
+    value = color.lstrip("#")
+    if len(value) != 6:
+        raise ValueError(f"Formato colore non valido: {color!r}")
+    return tuple(int(value[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def _rgb_to_hex(red: int, green: int, blue: int) -> str:
+    """Restituisce la rappresentazione esadecimale di un colore RGB."""
+
+    red = max(0, min(255, red))
+    green = max(0, min(255, green))
+    blue = max(0, min(255, blue))
+    return f"#{red:02x}{green:02x}{blue:02x}"
+
+
+def _blend_colors(start: str, end: str, ratio: float) -> str:
+    """Mescola due colori esadecimali restituendo una tonalità intermedia."""
+
+    ratio = max(0.0, min(1.0, ratio))
+    start_r, start_g, start_b = _hex_to_rgb(start)
+    end_r, end_g, end_b = _hex_to_rgb(end)
+    red = int(start_r + (end_r - start_r) * ratio)
+    green = int(start_g + (end_g - start_g) * ratio)
+    blue = int(start_b + (end_b - start_b) * ratio)
+    return _rgb_to_hex(red, green, blue)
+
+
 def _infer_process_family(record: OperationRecord) -> str:
     """Classifica la lavorazione in famiglie tipiche del settore metalmeccanico."""
 
@@ -251,15 +281,19 @@ def launch_welcome_window(
         root = root_factory()
 
     root.title("TruMetraPla - Console Analitica")
-    root.geometry("960x600")
+    root.geometry("1040x660")
     try:
-        root.minsize(860, 520)
+        root.minsize(900, 560)
     except Exception:  # pragma: no cover - alcuni stub potrebbero non implementare minsize
         pass
     root.resizable(True, True)
 
     try:
         root.configure(background="#020617")
+        root.option_add("*Font", "Segoe UI 10")
+        root.option_add("*TCombobox*Listbox*Background", "#0f172a")
+        root.option_add("*TCombobox*Listbox*Foreground", "#e2e8f0")
+        root.option_add("*TCombobox*Listbox*selectBackground", "#22d3ee")
     except Exception:  # pragma: no cover - alcuni stub di test non implementano configure
         pass
 
@@ -271,15 +305,188 @@ def launch_welcome_window(
             style = None
 
     if style is not None:
+        base_theme = "clam"
+        neon_theme = "trumetrapla.neon"
+
+        def _safe_style_map(style_obj: object, style_name: str, **mapping: object) -> None:
+            if hasattr(style_obj, "map"):
+                getattr(style_obj, "map")(style_name, **mapping)
         try:
-            style.theme_use("clam")
-        except Exception:  # pragma: no cover - tema non disponibile
+            style.theme_create(
+                neon_theme,
+                parent=base_theme,
+                settings={
+                    "TFrame": {"configure": {"background": "#050a18"}},
+                    "TLabel": {
+                        "configure": {
+                            "background": "#050a18",
+                            "foreground": "#e2e8f0",
+                            "font": ("Segoe UI", 10),
+                        }
+                    },
+                    "TButton": {
+                        "configure": {
+                            "padding": (12, 8),
+                            "borderwidth": 0,
+                            "background": "#1f2937",
+                            "foreground": "#e2e8f0",
+                            "font": ("Segoe UI Semibold", 10),
+                        }
+                    },
+                    "TCombobox": {
+                        "configure": {
+                            "fieldbackground": "#0f172a",
+                            "background": "#0f172a",
+                            "foreground": "#e2e8f0",
+                            "padding": (8, 6),
+                        }
+                    },
+                    "TScrollbar": {
+                        "configure": {
+                            "background": "#0f172a",
+                            "troughcolor": "#050a18",
+                            "bordercolor": "#0f172a",
+                            "arrowcolor": "#38bdf8",
+                        }
+                    },
+                },
+            )
+        except Exception:  # pragma: no cover - il tema potrebbe già esistere
             pass
 
-        style.configure("Dashboard.TFrame", background="#f4f5f7")
-        style.configure("Card.TFrame", background="#ffffff", relief="ridge")
-        style.configure("Header.TLabel", font=("Segoe UI", 12, "bold"))
-        style.configure("Accent.TButton", font=("Segoe UI Semibold", 10))
+        try:
+            style.theme_use(neon_theme)
+        except Exception:  # pragma: no cover - tema non disponibile
+            try:
+                style.theme_use(base_theme)
+            except Exception:  # pragma: no cover - tema non disponibile
+                pass
+
+        style.configure("Dashboard.TFrame", background="#050a18")
+        style.configure(
+            "Card.TFrame",
+            background="#0b1220",
+            borderwidth=0,
+            relief="flat",
+        )
+        style.configure(
+            "Header.TLabel",
+            background="#050a18",
+            foreground="#f8fafc",
+            font=("Segoe UI Semibold", 13),
+        )
+        style.configure(
+            "Info.TLabel",
+            background="#050a18",
+            foreground="#94a3b8",
+            font=("Segoe UI", 10),
+        )
+        style.configure(
+            "Summary.TLabel",
+            background="#050a18",
+            foreground="#94a3b8",
+            font=("Segoe UI", 10),
+        )
+        style.configure(
+            "Status.TLabel",
+            background="#050a18",
+            foreground="#38bdf8",
+            font=("Segoe UI", 9),
+        )
+        style.configure(
+            "Credits.TLabel",
+            background="#050a18",
+            foreground="#475569",
+            font=("Segoe UI", 9),
+        )
+        style.configure(
+            "FilterLabel.TLabel",
+            background="#050a18",
+            foreground="#7dd3fc",
+            font=("Segoe UI Semibold", 9),
+        )
+        style.configure(
+            "Accent.TButton",
+            background="#22d3ee",
+            foreground="#020617",
+            padding=(16, 8),
+            font=("Segoe UI Semibold", 10),
+        )
+        style.configure(
+            "Secondary.TButton",
+            background="#1f2937",
+            foreground="#e2e8f0",
+            padding=(14, 8),
+            font=("Segoe UI", 10),
+        )
+        _safe_style_map(
+            style,
+            "Accent.TButton",
+            background=[("active", "#38bdf8"), ("pressed", "#0ea5e9")],
+            foreground=[("disabled", "#64748b")],
+        )
+        _safe_style_map(
+            style,
+            "Secondary.TButton",
+            background=[("active", "#27364a"), ("pressed", "#1b2639")],
+            foreground=[("disabled", "#475569")],
+        )
+        _safe_style_map(
+            style,
+            "TCombobox",
+            fieldbackground=[("readonly", "#0f172a")],
+            background=[("readonly", "#0f172a")],
+            foreground=[("readonly", "#e2e8f0")],
+            selectbackground=[("readonly", "#1d4ed8")],
+            selectforeground=[("readonly", "#f8fafc")],
+        )
+        style.configure(
+            "Tech.Treeview",
+            background="#0b1220",
+            fieldbackground="#0b1220",
+            foreground="#e2e8f0",
+            rowheight=28,
+            bordercolor="#1f2937",
+        )
+        style.configure(
+            "Treeview",
+            background="#0b1220",
+            fieldbackground="#0b1220",
+            foreground="#e2e8f0",
+            rowheight=28,
+        )
+        _safe_style_map(
+            style,
+            "Tech.Treeview",
+            background=[("selected", "#1d4ed8")],
+            foreground=[("selected", "#f8fafc")],
+        )
+        style.configure(
+            "Tech.Treeview.Heading",
+            background="#111c2f",
+            foreground="#38bdf8",
+            relief="flat",
+            font=("Segoe UI Semibold", 10),
+        )
+        style.configure(
+            "Treeview.Heading",
+            background="#111c2f",
+            foreground="#38bdf8",
+            relief="flat",
+            font=("Segoe UI Semibold", 10),
+        )
+        _safe_style_map(
+            style,
+            "Tech.Treeview.Heading",
+            background=[("active", "#1f2a44")],
+            foreground=[("pressed", "#0ea5e9")],
+        )
+        _safe_style_map(
+            style,
+            "Treeview.Heading",
+            background=[("active", "#1f2a44")],
+            foreground=[("pressed", "#0ea5e9")],
+        )
 
     state = _AppState()
     loader = operations_loader or (lambda path: load_operations_from_excel(path))
@@ -465,9 +672,11 @@ def launch_welcome_window(
                     pass
 
     # Variabili di stato testuali
-    file_var = tk.StringVar(value="Nessun file Excel aperto")
-    summary_var = tk.StringVar(value="Carica un file per visualizzare i KPI")
-    status_var = tk.StringVar(value="Pronto")
+    file_var = tk.StringVar(value="Nessun file caricato")
+    summary_var = tk.StringVar(
+        value="Carica un file Excel per attivare la console olografica dei KPI"
+    )
+    status_var = tk.StringVar(value="Sistema pronto • Nessun dataset caricato")
 
     # Menu principale
     menubar = tk.Menu(root)
@@ -497,7 +706,7 @@ def launch_welcome_window(
         _configure_tree_columns()
         tree.delete(*tree.get_children())
         columns = _active_columns()
-        for record in records:
+        for index, record in enumerate(records):
             values: list[str] = []
             for column_id in columns:
                 spec = state.column_specs.get(column_id)
@@ -512,7 +721,8 @@ def launch_welcome_window(
                     value = "" if value is None else str(value)
                 values.append(value)
 
-            tree.insert("", "end", values=tuple(values))
+            tag = "evenrow" if index % 2 == 0 else "oddrow"
+            tree.insert("", "end", values=tuple(values), tags=(tag,))
 
     def _format_summary(records: list[OperationRecord]) -> str:
         if not records:
@@ -524,9 +734,9 @@ def launch_welcome_window(
             {record.process_type for record in records if record.process_type}
         )
         return (
-            "Record: {records} | Quantità totali: {qty} | Ore totali: {hours:.2f} | "
-            "Throughput medio: {throughput:.2f} pezzi/ora | Dipendenti: {employees} | "
-            "Processi: {processes} | Macchine: {machines} | Tipi processo: {process_types}"
+            "⟡ Record totali: {records} • Quantità: {qty} • Ore: {hours:.2f} • "
+            "Throughput medio: {throughput:.2f} pezzi/ora • Dipendenti: {employees} • "
+            "Processi: {processes} • Macchine: {machines} • Tipi processo: {process_types}"
         ).format(
             records=len(records),
             qty=summary.total_quantity,
@@ -553,7 +763,9 @@ def launch_welcome_window(
         container = ttk.Frame(filters_frame, style="Dashboard.TFrame")
         container.pack(side="left", padx=(0, 12))
 
-        ttk.Label(container, text=f"{label}:").pack(anchor="w")
+        ttk.Label(container, text=f"{label}:", style="FilterLabel.TLabel").pack(
+            anchor="w"
+        )
 
         variable = tk.StringVar(value=default_label)
         combobox = ttk.Combobox(
@@ -702,8 +914,10 @@ def launch_welcome_window(
 
     def _apply_filters() -> None:
         if not state.records:
-            summary_var.set("Nessun dato da filtrare: carica un file Excel.")
-            status_var.set("Filtri in attesa di dati")
+            summary_var.set(
+                "Nessun dato da filtrare • importa un file Excel per iniziare."
+            )
+            status_var.set("Filtri sospesi • In attesa di dati")
             tree.delete(*tree.get_children())
             return
 
@@ -729,7 +943,7 @@ def launch_welcome_window(
         _update_table(filtered)
         summary_var.set(_format_summary(filtered))
         status_var.set(
-            "Filtri applicati: {visibili} su {totali} record".format(
+            "Filtri attivi • {visibili}/{totali} record visibili".format(
                 visibili=len(filtered), totali=len(state.records)
             )
         )
@@ -919,7 +1133,7 @@ def launch_welcome_window(
         state.records = records
         state.file_path = excel_path
         file_var.set(f"File corrente: {excel_path}")
-        status_var.set(f"Caricate {len(records)} righe dal file Excel")
+        status_var.set(f"Dataset attivo • {len(records)} record caricati")
         _refresh_column_specs(records)
         _refresh_filters(records)
         _apply_filters()
@@ -1248,8 +1462,110 @@ def launch_welcome_window(
     except Exception:  # pragma: no cover - alcuni stub potrebbero non implementare config
         pass
 
+    header_canvas = None
+    if hasattr(tk, "Canvas"):
+        header_canvas = tk.Canvas(
+            root,
+            height=120,
+            highlightthickness=0,
+            borderwidth=0,
+            background="#020617",
+        )
+        header_canvas.pack(fill="x")
+
+        accent_bar = tk.Frame(root, height=2, background="#22d3ee", borderwidth=0)
+        accent_bar.pack(fill="x")
+
+        def _draw_header_gradient(_event: object | None = None) -> None:
+            width = max(header_canvas.winfo_width(), 1)
+            height = max(header_canvas.winfo_height(), 1)
+            header_canvas.delete("gradient")
+            header_canvas.delete("text")
+            header_canvas.delete("accent")
+
+            step = max(int(width / 240), 1)
+            for index in range(0, width, step):
+                ratio = index / max(width - 1, 1)
+                color = _blend_colors("#0b1220", "#1f2a44", ratio)
+                header_canvas.create_line(
+                    index,
+                    0,
+                    index,
+                    height,
+                    tags="gradient",
+                    fill=color,
+                )
+
+            header_canvas.create_text(
+                32,
+                36,
+                anchor="w",
+                text="TRUMETRAPLA ANALYTICS HUB",
+                font=("Segoe UI Semibold", 18),
+                fill="#f8fafc",
+                tags="text",
+            )
+            header_canvas.create_text(
+                32,
+                78,
+                anchor="w",
+                text="Console futuristica per la produttività metalmeccanica",
+                font=("Segoe UI", 11),
+                fill="#38bdf8",
+                tags="text",
+            )
+
+            if width > 360:
+                polygon_width = min(260, max(180, width // 5))
+                x1 = width - 32
+                x0 = max(32, x1 - polygon_width)
+                y0 = 28
+                y1 = height - 28
+                mid = (y0 + y1) / 2
+                header_canvas.create_polygon(
+                    x0,
+                    y0,
+                    x1 - 32,
+                    y0,
+                    x1,
+                    mid,
+                    x1 - 32,
+                    y1,
+                    x0,
+                    y1,
+                    x0 - 28,
+                    mid,
+                    tags="accent",
+                    outline="#22d3ee",
+                    fill="#020617",
+                    width=2,
+                )
+                header_canvas.create_line(
+                    x0,
+                    y0,
+                    x1 - 32,
+                    y0,
+                    fill="#38bdf8",
+                    width=2,
+                    tags="accent",
+                )
+                header_canvas.create_line(
+                    x0,
+                    y1,
+                    x1 - 32,
+                    y1,
+                    fill="#38bdf8",
+                    width=2,
+                    tags="accent",
+                )
+
+            header_canvas.tag_lower("gradient")
+
+        header_canvas.bind("<Configure>", _draw_header_gradient)
+        _draw_header_gradient()
+
     # Layout principale
-    main_frame = ttk.Frame(root, padding=20, style="Dashboard.TFrame")
+    main_frame = ttk.Frame(root, padding=28, style="Dashboard.TFrame")
     main_frame.pack(expand=True, fill="both")
 
     header = ttk.Frame(main_frame, style="Dashboard.TFrame")
@@ -1264,9 +1580,13 @@ def launch_welcome_window(
     ).pack(
         fill="x", pady=(0, 4)
     )
-    ttk.Label(header, textvariable=summary_var, wraplength=920, anchor="w", style="Info.TLabel").pack(
-        fill="x"
-    )
+    ttk.Label(
+        header,
+        textvariable=summary_var,
+        wraplength=920,
+        anchor="w",
+        style="Summary.TLabel",
+    ).pack(fill="x")
 
     filters_frame = ttk.Frame(main_frame, style="Dashboard.TFrame")
     filters_frame.pack(fill="x", pady=12)
@@ -1328,14 +1648,38 @@ def launch_welcome_window(
         filters_frame,
         text="Aggiungi campo filtro…",
         command=_prompt_add_filter,
+        style="Secondary.TButton",
     )
     add_filter_button.pack(side="left", padx=(4, 0))
 
-    filter_button = ttk.Button(filters_frame, text="Applica filtri", command=_apply_filters)
+    filter_button = ttk.Button(
+        filters_frame,
+        text="Applica filtri",
+        command=_apply_filters,
+        style="Accent.TButton",
+    )
     filter_button.pack(side="left", padx=(12, 0))
 
-    table_frame = ttk.Frame(main_frame, padding=12, style="Card.TFrame")
-    table_frame.pack(fill="both", expand=True)
+    table_frame_parent: object
+    if hasattr(tk, "Frame"):
+        table_wrapper = tk.Frame(
+            main_frame,
+            background="#050a18",
+            highlightbackground="#22d3ee",
+            highlightcolor="#22d3ee",
+            highlightthickness=1,
+            bd=0,
+        )
+        table_wrapper.pack(fill="both", expand=True, pady=(12, 0))
+        table_frame_parent = table_wrapper
+        table_frame = ttk.Frame(table_frame_parent, padding=16, style="Card.TFrame")
+        table_frame.pack(fill="both", expand=True)
+    else:
+        table_frame_parent = main_frame
+        table_frame = ttk.Frame(
+            table_frame_parent, padding=16, style="Card.TFrame"
+        )
+        table_frame.pack(fill="both", expand=True, pady=(12, 0))
 
     tree = ttk.Treeview(
         table_frame,
@@ -1353,22 +1697,40 @@ def launch_welcome_window(
     vsb.pack(side="left", fill="y")
     hsb.pack(side="bottom", fill="x")
 
+    if hasattr(tree, "tag_configure"):
+        tree.tag_configure("evenrow", background="#0d1628")
+        tree.tag_configure("oddrow", background="#101a30")
+
     _configure_tree_columns()
 
     footer = ttk.Frame(main_frame, style="Dashboard.TFrame")
     footer.pack(fill="x", pady=(12, 0))
 
-    ttk.Button(footer, text="Apri file Excel…", command=_open_file).pack(side="left")
-    ttk.Button(footer, text="Mostra KPI", command=_show_kpi_dialog).pack(side="left", padx=8)
-    ttk.Button(footer, text="Grafico a torta", command=_show_pie_chart).pack(
-        side="left", padx=8
-    )
-    ttk.Label(footer, textvariable=status_var).pack(side="right")
+    ttk.Button(
+        footer,
+        text="Apri file Excel…",
+        command=_open_file,
+        style="Accent.TButton",
+    ).pack(side="left")
+    ttk.Button(
+        footer,
+        text="Mostra KPI",
+        command=_show_kpi_dialog,
+        style="Secondary.TButton",
+    ).pack(side="left", padx=8)
+    ttk.Button(
+        footer,
+        text="Grafico a torta",
+        command=_show_pie_chart,
+        style="Secondary.TButton",
+    ).pack(side="left", padx=8)
+    ttk.Label(footer, textvariable=status_var, style="Status.TLabel").pack(side="right")
 
     ttk.Label(
         main_frame,
         text="Prodotto da Francesco Castaldi",
         anchor="center",
+        style="Credits.TLabel",
     ).pack(fill="x", pady=(8, 0))
 
     commands: dict[str, Callable[[], None]] = {
