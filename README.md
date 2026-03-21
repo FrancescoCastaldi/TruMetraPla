@@ -19,6 +19,63 @@
 
 ---
 
+## Installazione
+
+### Requisiti
+
+- Python 3.11 o superiore
+- pip (gestore pacchetti Python)
+
+### Metodo 1: Installazione con pip (consigliato)
+
+Installa direttamente dal repository GitHub:
+
+```bash
+pip install git+https://github.com/FrancescoCastaldi/TruMetraPla.git
+```
+
+### Metodo 2: Installazione da sorgente
+
+Clona il repository e installa in modalità sviluppo:
+
+```bash
+# Clona il repository
+git clone https://github.com/FrancescoCastaldi/TruMetraPla.git
+cd TruMetraPla
+
+# Installa con dipendenze
+pip install -e .[test]
+```
+
+### Metodo 3: Eseguibile precompilato
+
+**Windows:**
+- Scarica `TruMetraPlaSetup.exe` o `TruMetraPla.exe` dalla sezione [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases)
+- Esegui l'installer o l'eseguibile portatile
+- Nessuna installazione Python necessaria
+
+**Linux:**
+- Scarica `trumetrapla-*.tar.gz` dalla sezione [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases)
+- Estrai ed esegui lo script di installazione:
+
+```bash
+tar xzf trumetrapla-*.tar.gz
+cd trumetrapla-*/
+sudo ./install.sh
+```
+
+### Verifica installazione
+
+Dopo l'installazione, verifica che tutto funzioni:
+
+```bash
+# Mostra versione e aiuto
+trumetrapla --help
+
+# Avvia la dashboard
+trumetrapla
+```
+
 ## Quick start
 
 ### Installazione
