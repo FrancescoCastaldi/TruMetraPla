@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
+#
+# Script per build e packaging di TruMetraPla su Linux (Ubuntu/Debian)
+# Installa dipendenze, crea virtual environment e genera pacchetto .tar.gz
+#
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
@@ -47,7 +51,7 @@ if [[ $RUN_APT -eq 1 ]]; then
         log "Aggiornamento indici APT"
         sudo apt update
         log "Installazione pacchetti di sistema"
-        sudo apt install -y python3-venv python3-full desktop-file-utils
+        sudo apt install -y python3-venv python3-full desktop-file-utils python3-tk
     else
         log "APT non disponibile su questo sistema: salto installazione pacchetti"
         log "Installa manualmente python3-venv, python3-full e desktop-file-utils oppure usa --skip-apt"
