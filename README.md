@@ -1,183 +1,336 @@
-# TruMetraPla
+# 📊 TruMetraPla
 
-Strumento desktop e CLI per analizzare dati di produzione da Excel, calcolare KPI e distribuire rapidamente report o eseguibili Windows.
+> **Analisi produttività industriale** - Tool desktop e CLI per monitorare dati di produzione da Excel con KPI, dashboard interattiva e report automatizzati.
 
-## Utilizzo rapido
-- **Installazione**: `pip install -e .[test]`
-- **Dashboard**: `trumetrapla` (oppure avvia `dist/TruMetraPla.exe` dopo il build)
-- **Report CLI**: `trumetrapla report produzione.xlsx`
-- **Pacchetto Linux**: `trumetrapla build-linux`
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey)
 
-- Import automatico di file Excel con riconoscimento delle intestazioni italiane e inglesi.
-- Calcolo dei principali indicatori: pezzi prodotti, ore lavorate, produttività media.
-- Aggregazioni per dipendente, processo e giorno con ordinamento per produttività.
-- Consolle grafica futuristica con gradienti neon, filtri dinamici, tabella interattiva e grafico a torta per analizzare i file Excel.
-- Eseguibile Windows che apre una dashboard desktop con caricamento file guidato e riepiloghi KPI.
+---
 
-## Dashboard
-- Filtri per operatore/processo e tabella con KPI.
-- Finestra grafica con report a torta basati su processo o operatore.
+## ✨ Caratteristiche Principali
 
-Il progetto utilizza Python 3.11+. Per installare le dipendenze in modalità sviluppo è sufficiente eseguire:
+✅ **Import Intelligente** - Riconoscimento automatico colonne Excel (italiano/inglese)  
+✅ **Dashboard Moderna** - Interfaccia grafica con tema tech minimal e filtri dinamici  
+✅ **KPI Real-time** - Pezzi prodotti, ore lavorate, produttività media per dipendente/processo  
+✅ **Grafici Interattivi** - Visualizzazioni a torta per analisi rapide  
+✅ **Multi-piattaforma** - Eseguibile Windows + pacchetto Linux  
+✅ **CLI Completo** - Report da riga di comando con opzioni avanzate  
+
+---
+
+## 🚀 Quick Start
+
+### Installazione
 
 ```bash
 pip install -e .[test]
 ```
 
-### Requisiti per l'installazione su Windows
-
-Per creare ed eseguire l'installer Windows assicurati di avere a disposizione:
-
-1. **Sistema operativo**: Windows 10 o Windows 11 a 64 bit con tutti gli aggiornamenti recenti.
-2. **Python**: versione 3.11 o superiore installata dal [Microsoft Store](https://www.microsoft.com/store/productId/9PJPW5LDXLZ5) oppure dal sito ufficiale, con l'opzione "Aggiungi Python al PATH" abilitata.
-3. **Prompt dei comandi/PowerShell**: per eseguire lo script `installer/Setup-TruMetraPla.bat`, che crea automaticamente l'ambiente virtuale e installa i componenti necessari.
-4. **Strumenti di compilazione**: Microsoft Visual C++ Build Tools o un'installazione recente di Visual Studio con il carico di lavoro "Sviluppo desktop con C++" per garantire la disponibilità dei compilatori necessari a PyInstaller.
-5. **Dipendenze Python**: pacchetti elencati nell'extra `build` (`pip install .[build]`), che includono PyInstaller.
-6. **NSIS (opzionale)**: se desideri generare anche l'installer grafico, installa [Nullsoft Scriptable Install System](https://nsis.sourceforge.io/Download).
-
-Tutti i requisiti vengono gestiti automaticamente dallo script PowerShell, che verifica la presenza di Python e, se necessario, crea l'ambiente virtuale e installa le dipendenze.
-
-## Interfaccia di benvenuto
-
-### Avvio da riga di comando
-
-Dopo l'installazione è disponibile il comando `trumetrapla`. Se avviato senza argomenti mostra l'interfaccia di benvenuto testuale che permette di:
-
-1. Generare un report guidato a partire da un file Excel.
-2. Visualizzare le istruzioni per creare l'eseguibile e l'installer Windows.
-
-Per limitarsi alla sola stampa del menu senza interazione puoi usare:
+### Utilizzo Base
 
 ```bash
-trumetrapla --no-interactive
-```
+# Apri la dashboard interattiva
+trumetrapla
 
-### Avvio dall'eseguibile Windows
-
-Il file `TruMetraPla.exe` generato con PyInstaller (o installato tramite l'installer automatico) apre una dashboard desktop pensata per l'analisi rapida dei dati.
-La schermata principale offre:
-
-- **Menu File** con la voce *Apri file Excel…* per selezionare il file da importare.
-- **Filtri a tendina** per isolare rapidamente un singolo dipendente o processo produttivo.
-- **Tabella interattiva** con le colonne normalizzate (data, dipendente, processo, pezzi, durata e produttività oraria) immersa in una cornice neon.
-- **Pulsanti "Mostra KPI" e "Grafico a torta"** per aprire rispettivamente il riepilogo numerico e la distribuzione visiva dei pezzi prodotti, con una barra di stato aggiornata in tempo reale.
-
-Al caricamento viene aggiornato lo stato nella barra inferiore, insieme al riepilogo dei totali (pezzi, ore, throughput e numero di dipendenti/processi). In assenza del runtime grafico Windows, l'applicazione ripiega automaticamente sulla CLI.
-
-## Interfaccia a riga di comando (modalità diretta)
-
-Per generare un report direttamente da riga di comando:
-
-```bash
+# Genera report da CLI
 trumetrapla report produzione.xlsx
+
+# Crea pacchetto Linux
+trumetrapla build-linux
 ```
 
-Opzioni principali:
+---
 
-- `--sheet`: nome o indice del foglio Excel da analizzare.
-- `--column`: associazione esplicita tra un campo canonico (`date`, `employee`, `process`, `quantity`, `duration_minutes`) e la colonna nel file.
-- `--alias`: aggiunge alias personalizzati per l'autoricnoscimento delle colonne.
+## 💻 Dashboard Desktop
 
-Esempio di mappatura personalizzata:
+La GUI offre un'esperienza completa per l'analisi dei dati:
 
+- **📁 Caricamento File** - Drag & drop o menu File → Apri
+- **🎯 Filtri Dinamici** - Filtra per operatore, processo, macchina
+- **📊 Tabella Interattiva** - Visualizza tutti i KPI con colonne ordinabili
+- **📊 Grafici** - Report a torta basati su processo/operatore
+- **💾 Export** - Salva dati filtrati in CSV
+
+### Avvio Dashboard
+
+**Da codice:**
 ```bash
-trumetrapla report produzione.xlsx --column quantity "Pezzi prodotti" --alias employee Operatore
+trumetrapla
 ```
 
-## Costruire l'eseguibile Windows
+**Da eseguibile Windows:**
+- Doppio click su `dist/TruMetraPla.exe`
+- Oppure installa con l'installer automatico
 
-1. Installa le dipendenze di build: `pip install .[build]` (su Windows con Python 3.11 o superiore) oppure esegui lo script `installer/Setup-TruMetraPla.bat`, che crea un ambiente virtuale dedicato, installa PyInstaller e — se disponibile — scarica automaticamente NSIS tramite `winget`.
-2. Genera l'eseguibile lanciando `trumetrapla build-exe`, utilizzando il menu interattivo o gli script PowerShell/BAT. Il nuovo `installer/Build-TruMetraPla.bat` riutilizza automaticamente l'ambiente creato da `Setup-TruMetraPla.bat` e può essere invocato anche da una cartella diversa dal repository. Verrà creato `TruMetraPla.exe` nella cartella `dist/`; facendo doppio clic sull'eseguibile si aprirà direttamente la finestra grafica di benvenuto.
-3. (Opzionale ma consigliato) Compila l'installer grafico con `trumetrapla build-installer`. Il comando crea `TruMetraPla_Setup_<versione>.exe` pronto per l'utente finale.
+---
 
-### Creare l'installer automatico
+## 🛠️ Build & Distribuzione
 
-Per produrre un file `TruMetraPla_Setup.exe` che installi automaticamente il programma in `C:\TruMetraPla`:
+### Windows
 
-```powershell
-pip install .[build]
-trumetrapla build-installer
-```
-
-Il comando verifica la presenza di NSIS (`makensis`) e, se necessario, genera prima l'eseguibile stand-alone. Il risultato viene salvato nella cartella `dist/` e può essere distribuito direttamente: facendo doppio clic sull'installer viene avviata una procedura guidata che copia i file nella cartella predefinita, crea le scorciatoie sul desktop e nel menu Start e apre la finestra di benvenuto al termine dell'installazione.
-
-Per personalizzare la cartella di output:
-
-```powershell
-trumetrapla build-installer --dist C:\Percorso\Personalizzato
-```
-
-Se desideri rigenerare da zero anche l'eseguibile (ignorando eventuali build precedenti) aggiungi `--no-reuse-exe`.
-
-### Dove viene installato il software
-
-- **Eseguibile portabile**: il comando `trumetrapla build-exe` e lo script batch `Setup-TruMetraPla.bat` copiano l'eseguibile nella cartella di destinazione (`dist/` per impostazione predefinita). Il parametro `--dist` passato allo script consente di scegliere una directory diversa.
-- **Installer automatico**: il comando `trumetrapla build-installer` utilizza lo script `TruMetraPla-Installer.nsi` per creare `TruMetraPla_Setup_<versione>.exe`, che installa l'applicazione in `C:\TruMetraPla` (variabile `INSTALL_DIR`). Puoi modificare questo percorso aprendo lo script con un editor di testo e cambiando la variabile, oppure l'utente finale può selezionare una cartella differente nella schermata "Cartella di installazione".
-
-### Automazione da PowerShell
-
-Per Windows sono disponibili due script complementari:
-
-- `installer/Setup-TruMetraPla.bat`: crea o aggiorna un ambiente virtuale dedicato, installa il progetto con le dipendenze necessarie alla build e (se richiesto) installa NSIS.
-- `installer/Build-TruMetraPla.bat`: riutilizza automaticamente l'ambiente `.venv-trumetrapla-build` generato dal setup, lancia `trumetrapla build-exe` con gli argomenti desiderati e, con l'opzione `--include-installer`, richiama anche `trumetrapla build-installer`.
-
-Esempio rapido per generare eseguibile e installer da Windows:
-
-```bat
+#### Metodo 1: Build Automatico
+```batch
+installer\Setup-TruMetraPla.bat
 installer\Build-TruMetraPla.bat --include-installer
 ```
 
-## Pacchetto Linux per Xubuntu
+#### Metodo 2: Manuale
+```bash
+pip install .[build]
+trumetrapla build-exe
+trumetrapla build-installer
+```
 
-Su Xubuntu (e in generale sulle distribuzioni basate su Ubuntu 22.04+) puoi generare un archivio installabile tramite PyInstaller eseguendo:
+**Output:**
+- `dist/TruMetraPla.exe` - Eseguibile stand-alone
+- `dist/TruMetraPla_Setup.exe` - Installer NSIS
+
+### Linux (Ubuntu/Xubuntu)
 
 ```bash
 pip install .[build]
 trumetrapla build-linux
 ```
 
-Il comando produce `dist/TruMetraPla-linux.tar.gz` con:
-
-- `bin/trumetrapla`: binario standalone creato da PyInstaller.
-- `install.sh`: script che copia il programma in `/opt/trumetrapla`, crea il collegamento simbolico `trumetrapla` in `/usr/local/bin` e registra il file desktop (se `desktop-file-install` è disponibile).
-- `trumetrapla.desktop`: voce `.desktop` pronta per l'integrazione nel menu delle applicazioni.
-
-Per installare il pacchetto estrai l'archivio e lancia:
-
+**Installazione:**
 ```bash
-tar -xf TruMetraPla-linux.tar.gz
+tar -xf dist/TruMetraPla-linux.tar.gz
 cd TruMetraPla-linux
-./install.sh
+sudo ./install.sh
 ```
 
-Lo script richiede privilegi amministrativi per copiare i file nelle directory di sistema; puoi modificare le variabili `PREFIX` e `BIN_DEST` prima dell'esecuzione per installare in un percorso personalizzato.
+Installa in `/opt/trumetrapla` e crea link in `/usr/local/bin`.
 
-```bat
-installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
+---
+
+## 📜 Interfaccia CLI
+
+### Report Base
+```bash
+trumetrapla report produzione.xlsx
 ```
 
-Lo script richiede privilegi amministrativi per copiare i file nelle directory di sistema; puoi modificare le variabili `PREFIX` e `BIN_DEST` prima dell'esecuzione per installare in un percorso personalizzato.
+### Opzioni Avanzate
+```bash
+# Specifica foglio Excel
+trumetrapla report produzione.xlsx --sheet "Dati 2026"
 
-Per una guida passo-passo con tutti i comandi utili consulta la wiki in `docs/installazione-xubuntu.md`.
+# Mappatura colonne personalizzata
+trumetrapla report produzione.xlsx \
+  --column quantity "Pezzi prodotti" \
+  --column employee "Nome operatore"
 
-Se preferisci un'unica procedura automatizzata puoi usare lo script `installer/install-trumetrapla-xubuntu.sh`, che prepara la virtualenv, installa le dipendenze e avvia `trumetrapla build-linux` creando automaticamente l'archivio in `dist/` (opzione `--dist` per personalizzare la destinazione). Lo script verifica la presenza di `apt`: sulle distribuzioni non basate su Debian (es. macOS) l'installazione dei pacchetti di sistema viene automaticamente saltata e viene mostrato un messaggio che ricorda di installare manualmente `python3-venv`, `python3-full` e `desktop-file-utils` oppure di usare l'opzione `--skip-apt`.
+# Alias personalizzati
+trumetrapla report produzione.xlsx \
+  --alias employee "Operatore,Worker"
+```
 
-## Utilizzo come libreria Python
+### Parametri Disponibili
+
+| Opzione | Descrizione | Esempio |
+|---------|-------------|----------|
+| `--sheet` | Nome o indice foglio Excel | `--sheet 0` o `--sheet "Gennaio"` |
+| `--column` | Mappa campo → colonna | `--column date "Data produzione"` |
+| `--alias` | Alias per riconoscimento automatico | `--alias quantity "Pezzi,Pcs"` |
+
+---
+
+## 📚 Uso come Libreria Python
 
 ```python
 from pathlib import Path
 from trumetrapla import (
-    daily_trend,
-    group_by_employee,
     load_operations_from_excel,
     summarize_operations,
+    group_by_employee,
+    group_by_process,
+    daily_trend,
 )
 
+# Carica dati
 records = load_operations_from_excel(Path("produzione.xlsx"))
+
+# Statistiche generali
 summary = summarize_operations(records)
-print(summary.total_quantity)
+print(f"Totale pezzi: {summary.total_quantity}")
+print(f"Throughput medio: {summary.throughput:.2f} pz/ora")
+
+# Raggruppa per dipendente
+top_employees = group_by_employee(records)[:5]
+for emp in top_employees:
+    print(f"{emp.entity}: {emp.total_quantity} pezzi")
+
+# Trend giornaliero
+trend = daily_trend(records)
+for day in trend:
+    print(f"{day.date}: {day.total_quantity} pezzi")
 ```
 
-## Branch di sincronizzazione
+---
 
-Per evitare l'errore `fatal: couldn't find remote ref PSite` durante le operazioni automatiche di fetch, il repository include un workflow GitHub Actions che mantiene aggiornato il branch `PSite` sincronizzandolo con l'ultimo commit dei branch principali (`work`, `main` o `master`). In questo modo gli script esterni che fanno riferimento a `PSite` troveranno sempre la relativa ref remota.
+## ⚙️ Requisiti di Sistema
+
+### Windows
+- Windows 10/11 (64-bit)
+- Python 3.11+
+- Visual C++ Build Tools (per PyInstaller)
+- NSIS (opzionale, per installer grafico)
+
+### Linux
+- Ubuntu 22.04+ o derivati (Xubuntu, etc.)
+- Python 3.11+
+- `python3-venv`, `desktop-file-utils`
+
+---
+
+## 📝 Mappatura Colonne Excel
+
+### Campi Richiesti
+- **date** - Data produzione
+- **employee** - Dipendente/Operatore
+- **process** - Processo/Fase lavorazione
+- **quantity** - Pezzi prodotti
+- **duration_minutes** - Durata in minuti
+
+### Campi Opzionali
+- **machine** - Macchina utilizzata
+- **process_type** - Tipologia processo
+- **Extra** - Qualsiasi altra colonna viene importata automaticamente
+
+### Riconoscimento Automatico
+
+TruMetraPla riconosce automaticamente intestazioni comuni in italiano e inglese:
+
+| Campo | Alias riconosciuti |
+|-------|--------------------|
+| date | data, date, giorno |
+| employee | dipendente, operatore, employee, worker |
+| process | processo, fase, linea, process, activity |
+| quantity | quantità, pezzi, quantity, pieces |
+| duration_minutes | durata, minuti, minutes, tempo |
+
+---
+
+## 🔧 Sviluppo
+
+### Setup Ambiente Dev
+```bash
+git clone https://github.com/FrancescoCastaldi/TruMetraPla.git
+cd TruMetraPla
+pip install -e .[test]
+```
+
+### Run Tests
+```bash
+pytest
+```
+
+### Struttura Progetto
+```
+TruMetraPla/
+├── src/trumetrapla/
+│   ├── cli.py              # Interfaccia CLI
+│   ├── gui.py              # Dashboard grafica
+│   ├── data_loader.py      # Import Excel
+│   ├── metrics.py          # Calcolo KPI
+│   └── models.py           # Modelli dati
+├── installer/           # Script build Windows/Linux
+├── tests/               # Unit tests
+└── docs/                # Documentazione
+```
+
+---
+
+## 📦 Installazione Completa Windows
+
+### Opzione A: Installer Automatico (Consigliato)
+1. Scarica `TruMetraPla_Setup.exe`
+2. Esegui l'installer
+3. Segui la procedura guidata
+4. Lancia da menu Start o icona desktop
+
+### Opzione B: Build da Codice
+```batch
+# Setup ambiente e dipendenze
+installer\Setup-TruMetraPla.bat
+
+# Build eseguibile + installer
+installer\Build-TruMetraPla.bat --include-installer
+
+# L'installer sarà in dist/TruMetraPla_Setup.exe
+```
+
+**Cartella di installazione:** `C:\TruMetraPla` (modificabile durante setup)
+
+---
+
+## 🐧 Installazione Linux
+
+### Metodo Automatico (Xubuntu/Ubuntu)
+```bash
+cd installer
+./install-trumetrapla-xubuntu.sh
+```
+
+### Metodo Manuale
+```bash
+# Build pacchetto
+pip install .[build]
+trumetrapla build-linux
+
+# Estrai e installa
+tar -xf dist/TruMetraPla-linux.tar.gz
+cd TruMetraPla-linux
+sudo ./install.sh
+```
+
+### Personalizzazione Path
+Modifica `PREFIX` e `BIN_DEST` in `install.sh` prima dell'esecuzione.
+
+---
+
+## 💬 FAQ
+
+**Q: Come faccio se Excel ha colonne con nomi diversi?**  
+A: Usa l'opzione `--column` per mappare manualmente, oppure `--alias` per aggiungere alias riconosciuti automaticamente.
+
+**Q: Posso usare TruMetraPla su macOS?**  
+A: Attualmente supportato solo Windows e Linux. Il codice Python funziona su macOS ma non è disponibile il pacchetto pre-compilato.
+
+**Q: Come esporto i dati filtrati?**  
+A: Nella dashboard grafica, applica i filtri desiderati e clicca su "Esporta CSV".
+
+**Q: Dove vengono salvati i report?**  
+A: I report CLI vengono stampati a schermo. Usa `> output.txt` per salvarli su file.
+
+---
+
+## 🔗 Link Utili
+
+- [Documentazione Completa](docs/)
+- [Issue Tracker](https://github.com/FrancescoCastaldi/TruMetraPla/issues)
+- [Wiki](https://github.com/FrancescoCastaldi/TruMetraPla/wiki)
+
+---
+
+## 📜 Licenza
+
+MIT License - Vedi [LICENSE](LICENSE) per dettagli.
+
+---
+
+## ✨ Novità Recenti
+
+### v2.0 (Work in Progress)
+- 🎨 Nuovo tema UI "Tech Minimal" - Design pulito e professionale
+- 📊 Grafici a barre interattivi
+- 💾 Export CSV integrato
+- 🔧 Supporto colonne Excel arbitrarie
+- ⚡ Performance migliorate nel caricamento dati
+
+---
+
+<p align="center">
+  <sub>Sviluppato con ❤️ da <a href="https://github.com/FrancescoCastaldi">Francesco Castaldi</a></sub>
+</p>
