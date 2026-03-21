@@ -289,11 +289,11 @@ def launch_welcome_window(
     root.resizable(True, True)
 
     try:
-        root.configure(background="#020617")
+        root.configure(background="#f5f5f5")
         root.option_add("*Font", "Segoe UI 10")
         root.option_add("*TCombobox*Listbox*Background", "#0f172a")
-        root.option_add("*TCombobox*Listbox*Foreground", "#e2e8f0")
-        root.option_add("*TCombobox*Listbox*selectBackground", "#22d3ee")
+        root.option_add("*TCombobox*Listbox*Foreground", "#212121")
+        root.option_add("*TCombobox*Listbox*selectBackground", "#1976d2")
     except Exception:  # pragma: no cover - alcuni stub di test non implementano configure
         pass
 
@@ -316,11 +316,11 @@ def launch_welcome_window(
                 neon_theme,
                 parent=base_theme,
                 settings={
-                    "TFrame": {"configure": {"background": "#050a18"}},
+                    "TFrame": {"configure": {"background": "#ffffff"}},
                     "TLabel": {
                         "configure": {
-                            "background": "#050a18",
-                            "foreground": "#e2e8f0",
+                            "background": "#ffffff",
+                            "foreground": "#212121",
                             "font": ("Segoe UI", 10),
                         }
                     },
@@ -329,7 +329,7 @@ def launch_welcome_window(
                             "padding": (12, 8),
                             "borderwidth": 0,
                             "background": "#1f2937",
-                            "foreground": "#e2e8f0",
+                            "foreground": "#212121",
                             "font": ("Segoe UI Semibold", 10),
                         }
                     },
@@ -337,14 +337,14 @@ def launch_welcome_window(
                         "configure": {
                             "fieldbackground": "#0f172a",
                             "background": "#0f172a",
-                            "foreground": "#e2e8f0",
+                            "foreground": "#212121",
                             "padding": (8, 6),
                         }
                     },
                     "TScrollbar": {
                         "configure": {
                             "background": "#0f172a",
-                            "troughcolor": "#050a18",
+                            "troughcolor": "#ffffff",
                             "bordercolor": "#0f172a",
                             "arrowcolor": "#38bdf8",
                         }
@@ -362,7 +362,7 @@ def launch_welcome_window(
             except Exception:  # pragma: no cover - tema non disponibile
                 pass
 
-        style.configure("Dashboard.TFrame", background="#050a18")
+        style.configure("Dashboard.TFrame", background="#ffffff")
         style.configure(
             "Card.TFrame",
             background="#0b1220",
@@ -371,51 +371,51 @@ def launch_welcome_window(
         )
         style.configure(
             "Header.TLabel",
-            background="#050a18",
+            background="#ffffff",
             foreground="#f8fafc",
             font=("Segoe UI Semibold", 13),
         )
         style.configure(
             "Info.TLabel",
-            background="#050a18",
+            background="#ffffff",
             foreground="#94a3b8",
             font=("Segoe UI", 10),
         )
         style.configure(
             "Summary.TLabel",
-            background="#050a18",
+            background="#ffffff",
             foreground="#94a3b8",
             font=("Segoe UI", 10),
         )
         style.configure(
             "Status.TLabel",
-            background="#050a18",
+            background="#ffffff",
             foreground="#38bdf8",
             font=("Segoe UI", 9),
         )
         style.configure(
             "Credits.TLabel",
-            background="#050a18",
+            background="#ffffff",
             foreground="#475569",
             font=("Segoe UI", 9),
         )
         style.configure(
             "FilterLabel.TLabel",
-            background="#050a18",
+            background="#ffffff",
             foreground="#7dd3fc",
             font=("Segoe UI Semibold", 9),
         )
         style.configure(
             "Accent.TButton",
-            background="#22d3ee",
-            foreground="#020617",
+            background="#1976d2",
+            foreground="#f5f5f5",
             padding=(16, 8),
             font=("Segoe UI Semibold", 10),
         )
         style.configure(
             "Secondary.TButton",
             background="#1f2937",
-            foreground="#e2e8f0",
+            foreground="#212121",
             padding=(14, 8),
             font=("Segoe UI", 10),
         )
@@ -436,7 +436,7 @@ def launch_welcome_window(
             "TCombobox",
             fieldbackground=[("readonly", "#0f172a")],
             background=[("readonly", "#0f172a")],
-            foreground=[("readonly", "#e2e8f0")],
+            foreground=[("readonly", "#212121")],
             selectbackground=[("readonly", "#1d4ed8")],
             selectforeground=[("readonly", "#f8fafc")],
         )
@@ -444,7 +444,7 @@ def launch_welcome_window(
             "Tech.Treeview",
             background="#0b1220",
             fieldbackground="#0b1220",
-            foreground="#e2e8f0",
+            foreground="#212121",
             rowheight=28,
             bordercolor="#1f2937",
         )
@@ -452,7 +452,7 @@ def launch_welcome_window(
             "Treeview",
             background="#0b1220",
             fieldbackground="#0b1220",
-            foreground="#e2e8f0",
+            foreground="#212121",
             rowheight=28,
         )
         _safe_style_map(
@@ -1151,7 +1151,7 @@ def launch_welcome_window(
         dialog.geometry("360x420")
         dialog.transient(root)
         try:
-            dialog.configure(background="#020617")
+            dialog.configure(background="#f5f5f5")
         except Exception:  # pragma: no cover - stub di test
             pass
 
@@ -1469,11 +1469,11 @@ def launch_welcome_window(
             height=120,
             highlightthickness=0,
             borderwidth=0,
-            background="#020617",
+            background="#f5f5f5",
         )
         header_canvas.pack(fill="x")
 
-        accent_bar = tk.Frame(root, height=2, background="#22d3ee", borderwidth=0)
+        accent_bar = tk.Frame(root, height=2, background="#1976d2", borderwidth=0)
         accent_bar.pack(fill="x")
 
         def _draw_header_gradient(_event: object | None = None) -> None:
@@ -1536,8 +1536,8 @@ def launch_welcome_window(
                     x0 - 28,
                     mid,
                     tags="accent",
-                    outline="#22d3ee",
-                    fill="#020617",
+                    outline="#1976d2",
+                    fill="#f5f5f5",
                     width=2,
                 )
                 header_canvas.create_line(
@@ -1664,9 +1664,9 @@ def launch_welcome_window(
     if hasattr(tk, "Frame"):
         table_wrapper = tk.Frame(
             main_frame,
-            background="#050a18",
-            highlightbackground="#22d3ee",
-            highlightcolor="#22d3ee",
+            background="#ffffff",
+            highlightbackground="#1976d2",
+            highlightcolor="#1976d2",
             highlightthickness=1,
             bd=0,
         )
