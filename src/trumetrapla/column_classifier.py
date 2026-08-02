@@ -1,19 +1,19 @@
-"""Classifier for inferring canonical TruMetraPla fields from Excel columns.
+"""Column classifier for inferring canonical TruMetraPla fields from Excel columns.
 
 The project needs to ingest spreadsheets coming from wildly different
-departments.  Header names change frequently and the data samples themselves can
+departments. Header names change frequently and the data samples themselves can
 contain hints about the semantics of a column (for instance a column full of
 timestamps is very likely to be the production ``date``).
 
 To provide a resilient experience we implement a tiny Naïve Bayes text
 classifier that analyses header names together with a short sample of values.
 The classifier has been trained with curated examples for each canonical field
-and produces a score for a candidate column.  The :class:`ColumnGuesser`
+and produces a score for a candidate column. The :class:`ColumnGuesser`
 combines those scores with lightweight heuristics (numeric detection,
 date-likeness, etc.) in order to auto-map arbitrary spreadsheets.
 
 The training data is intentionally embedded in the source so that the module is
-completely self-contained and does not require extra dependencies.  Although it
+completely self-contained and does not require extra dependencies. Although it
 is a very small model, it behaves like a standard machine learning component:
 tokens are extracted, priors are computed and predictions are made based on the
 calculated probabilities.
@@ -107,7 +107,7 @@ def analyse_samples(samples: Sequence[str] | None) -> dict[str, float]:
     """Extract lightweight metadata from column samples.
 
     The heuristics inspect the first N values of a column to infer whether they
-    look numeric, textual or date-like.  The metadata is later combined with the
+    look numeric, textual or date-like. The metadata is later combined with the
     probabilistic classifier to make a final decision.
     """
 
@@ -216,64 +216,64 @@ class ColumnGuesser:
 
 DEFAULT_TRAINING_DATA: dict[str, tuple[str, ...]] = {
     "date": (
-        "data produzione",
-        "giorno commessa",
+        "production date",
+        "work day",
         "production date",
         "day",
-        "data registrazione",
+        "registration date",
         "2024-01-01",
         "03/02/2024",
         "12.02.24",
     ),
     "employee": (
-        "operatore",
-        "dipendente",
-        "responsabile cella",
+        "operator",
+        "employee",
+        "cell leader",
         "worker name",
         "operator",
         "mario rossi",
         "team leader",
     ),
     "process": (
-        "processo",
-        "fase produttiva",
-        "operazione",
-        "fase",
+        "process",
         "production stage",
-        "taglio laser",
-        "assemblaggio",
+        "operation",
+        "stage",
+        "production stage",
+        "laser cutting",
+        "assembly",
     ),
     "machine": (
-        "macchina",
-        "impianto",
-        "postazione",
+        "machine",
+        "plant",
+        "workstation",
         "machine",
         "equipment",
-        "piegatrice 02",
+        "press brake 02",
     ),
     "process_type": (
-        "tipo processo",
-        "tipologia",
-        "categoria",
+        "process type",
+        "typology",
+        "category",
         "process family",
-        "assemblaggio",
-        "lavorazione meccanica",
+        "assembly",
+        "machining",
     ),
     "quantity": (
-        "pezzi",
-        "output",
-        "qta prodotta",
         "pieces",
-        "numero pezzi",
+        "output",
+        "qty produced",
+        "pieces",
+        "number of pieces",
         "100",
         "45",
     ),
     "duration_minutes": (
-        "durata",
-        "minuti lavorati",
-        "tempo ciclo",
+        "duration",
+        "minutes worked",
+        "cycle time",
         "cycle minutes",
-        "tempo totale",
+        "total time",
         "89",
         "123",
     ),
@@ -283,4 +283,3 @@ DEFAULT_TRAINING_DATA: dict[str, tuple[str, ...]] = {
 def build_default_guesser() -> ColumnGuesser:
     classifier = NaiveBayesColumnClassifier(DEFAULT_TRAINING_DATA)
     return ColumnGuesser(classifier)
-

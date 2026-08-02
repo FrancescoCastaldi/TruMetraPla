@@ -1,4 +1,4 @@
-"""Calcolo dei KPI di produzione."""
+"""Production KPI calculations."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from .models import OperationRecord
 
 @dataclass(frozen=True, slots=True)
 class Summary:
-    """Panoramica complessiva delle lavorazioni."""
+    """Overall overview of operations."""
 
     total_quantity: int
     total_hours: float
@@ -24,7 +24,7 @@ class Summary:
 
 @dataclass(frozen=True, slots=True)
 class EntityPerformance:
-    """Risultati aggregati per dipendente o processo."""
+    """Aggregated results for employee or process."""
 
     entity: str
     total_quantity: int
@@ -34,7 +34,7 @@ class EntityPerformance:
 
 @dataclass(frozen=True, slots=True)
 class DailyTotals:
-    """Aggregazione giornaliera dei pezzi prodotti."""
+    """Daily aggregation of pieces produced."""
 
     date: date
     total_quantity: int
@@ -43,7 +43,7 @@ class DailyTotals:
 
 
 def summarize_operations(records: Iterable[OperationRecord]) -> Summary:
-    """Ritorna un riepilogo complessivo delle lavorazioni fornite."""
+    """Return an overall summary of the provided operations."""
 
     records_list = list(records)
     total_quantity = sum(record.quantity for record in records_list)
@@ -61,14 +61,14 @@ def summarize_operations(records: Iterable[OperationRecord]) -> Summary:
 
 
 def group_by_employee(records: Iterable[OperationRecord]) -> list[EntityPerformance]:
-    """Aggrega i KPI per dipendente, ordinandoli per produttività."""
+    """Aggregate KPIs by employee, sorted by productivity."""
 
     aggregated = _aggregate_by(records, key=lambda record: record.employee)
     return _build_entity_performance(aggregated)
 
 
 def group_by_process(records: Iterable[OperationRecord]) -> list[EntityPerformance]:
-    """Aggrega i KPI per tipologia di processo."""
+    """Aggregate KPIs by process type."""
 
     aggregated = _aggregate_by(records, key=lambda record: record.process)
     return _build_entity_performance(aggregated)
@@ -80,29 +80,29 @@ def group_by_attributes(
     *,
     display_names: Mapping[str, str] | None = None,
 ) -> list[EntityPerformance]:
-    """Aggrega i KPI combinando più attributi dell'operazione.
+    """Aggregate KPIs combining multiple operation attributes.
 
     Parameters
     ----------
     records:
-        Collezione di record da aggregare.
+        Collection of records to aggregate.
     attributes:
-        Sequenza ordinata di nomi attributo da combinare. È richiesto almeno
-        un attributo valido.
+        Ordered sequence of attribute names to combine. At least
+        one valid attribute is required.
     display_names:
-        Etichette opzionali da utilizzare per formattare la descrizione
-        dell'entità risultante.
+        Optional labels to use for formatting the resulting
+        entity description.
     """
 
     if not attributes:
-        raise ValueError("È necessario indicare almeno un attributo per il raggruppamento.")
+        raise ValueError("At least one attribute must be specified for grouping.")
 
     getters = []
     for name in attributes:
         try:
             getters.append(attrgetter(name))
-        except AttributeError as exc:  # pragma: no cover - errori di programmazione
-            raise ValueError(f"Attributo sconosciuto per il raggruppamento: {name!r}") from exc
+        except AttributeError as exc:  # pragma: no cover - programming errors
+            raise ValueError(f"Unknown attribute for grouping: {name!r}") from exc
 
     aggregated: dict[tuple[object, ...], dict[str, float]] = defaultdict(
         lambda: {"quantity": 0.0, "hours": 0.0}
@@ -137,7 +137,7 @@ def group_by_attributes(
 
 
 def daily_trend(records: Iterable[OperationRecord]) -> list[DailyTotals]:
-    """Produce le aggregazioni giornaliere ordinate cronologicamente."""
+    """Produce daily aggregations sorted chronologically."""
 
     aggregated = _aggregate_by(records, key=lambda record: record.date)
     trend = [
@@ -147,7 +147,7 @@ def daily_trend(records: Iterable[OperationRecord]) -> list[DailyTotals]:
             total_hours=values["hours"],
             throughput=values["quantity"] / values["hours"] if values["hours"] else 0.0,
         )
-        for day, values in sorted(aggregated.items(), key=lambda item: item[0])
+        for day, values in sorted(aggregated.items(), key=lambda item: item[0])  # type: ignore[return-value]
     ]
     return trend
 

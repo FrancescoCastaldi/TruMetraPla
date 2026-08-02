@@ -6,18 +6,18 @@ if "%SCRIPT_DIR%"=="" set "SCRIPT_DIR=%CD%\\"
 set "SETUP_SCRIPT=%SCRIPT_DIR%Setup-TruMetraPla.bat"
 
 if not exist "%SETUP_SCRIPT%" (
-    echo Errore: impossibile trovare Setup-TruMetraPla.bat accanto a questo script.
+    echo Error: unable to find Setup-TruMetraPla.bat next to this script.
     exit /b 1
 )
 
 pushd "%SCRIPT_DIR%.."
 set "REPO_ROOT=%CD%"
 
-set "VENV_DIR=%REPO_ROOT%\.venv-trumetrapla-build"
+set "VENV_DIR=%REPO_ROOT%\.venv-TruMetraPla-build"
 set "VENV_PYTHON=%VENV_DIR%\Scripts\python.exe"
 
 if not exist "%VENV_PYTHON%" (
-    echo Ambiente di build non inizializzato. Avvio Setup-TruMetraPla.bat...
+    echo Build environment not initialized. Launching Setup-TruMetraPla.bat...
     call "%SETUP_SCRIPT%"
     if errorlevel 1 goto :error
 )
@@ -37,7 +37,7 @@ goto :parse_args
 
 :after_parse
 
-echo Generazione dell'eseguibile TruMetraPla.exe...
+echo Generating the TruMetraPla.exe executable...
 if defined ARGS (
     "%VENV_PYTHON%" -m trumetrapla build-exe !ARGS!
 ) else (
@@ -46,7 +46,7 @@ if defined ARGS (
 if errorlevel 1 goto :error
 
 if %INCLUDE_INSTALLER%==1 (
-    echo Creazione dell'installer TruMetraPla_Setup.exe...
+    echo Creating the TruMetraPla_Setup.exe installer...
     if defined ARGS (
         "%VENV_PYTHON%" -m trumetrapla build-installer !ARGS!
     ) else (
@@ -56,14 +56,14 @@ if %INCLUDE_INSTALLER%==1 (
 )
 
 echo.
-echo Operazione completata. I pacchetti sono nella cartella dist\.
+echo Operation completed. The packages are in the dist\ folder.
 popd
 endlocal
 exit /b 0
 
 :error
 echo.
-echo Errore durante la generazione del pacchetto.
+echo Error while generating the package.
 popd
 endlocal
 exit /b 1

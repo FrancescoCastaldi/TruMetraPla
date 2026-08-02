@@ -1,4 +1,4 @@
-"""Componenti dell'interfaccia grafica di TruMetraPla."""
+"""TruMetraPla - Graphical user interface components."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from typing import Callable, Dict, Mapping, Protocol
 
 from .data_loader import (
     ColumnMappingError,
+    OPTIONAL_FIELDS,
+    REQUIRED_FIELDS,
     load_operations_from_excel,
     suggest_column_mapping,
 )
@@ -18,7 +20,7 @@ from .models import OperationRecord
 
 
 class GUIUnavailableError(RuntimeError):
-    """Errore sollevato quando non è possibile avviare la GUI."""
+    """Error raised when the GUI cannot be started."""
 
 
 class _TkRoot(Protocol):
@@ -49,7 +51,7 @@ class _Toolkit:
 
 @dataclass
 class _AppState:
-    """Stato condiviso dell'interfaccia grafica."""
+    """Shared state of the graphical interface."""
 
     records: list[OperationRecord] = field(default_factory=list)
     filtered_records: list[OperationRecord] = field(default_factory=list)
@@ -70,7 +72,7 @@ class _AppState:
 
 @dataclass
 class ColumnSpec:
-    """Descrive una colonna mostrabile nella tabella principale."""
+    """Describes a column displayable in the main table."""
 
     identifier: str
     label: str
@@ -83,7 +85,7 @@ class ColumnSpec:
 
 @dataclass
 class WelcomeWindowHandles:
-    """Informazioni utili per i test sulla finestra creata."""
+    """Useful information for tests on the created window."""
 
     root: _TkRoot
     state: _AppState
@@ -92,7 +94,7 @@ class WelcomeWindowHandles:
 
 @dataclass
 class FilterControl:
-    """Widget di filtro configurabile dinamicamente."""
+    """Dynamically configurable filter widget."""
 
     identifier: str
     label: str
@@ -101,7 +103,7 @@ class FilterControl:
     combobox: object
     default_label: str
     frame: object
-    missing_label: str = "Non specificato"
+    missing_label: str = "Not specified"
 
     def format_value(self, value: object) -> str:
         if value is None:
@@ -119,28 +121,28 @@ class FilterControl:
 
 
 _MATERIAL_KEYWORDS = (
-    "materiale",
     "material",
-    "lega",
     "alloy",
-    "acciaio",
     "steel",
-    "metallo",
     "metal",
 )
 
 
 def _hex_to_rgb(color: str) -> tuple[int, int, int]:
-    """Converte un colore esadecimale in una tupla RGB."""
+    """Convert a hexadecimal color to an RGB tuple."""
 
     value = color.lstrip("#")
     if len(value) != 6:
-        raise ValueError(f"Formato colore non valido: {color!r}")
-    return tuple(int(value[i : i + 2], 16) for i in (0, 2, 4))
+        raise ValueError(f"Invalid color format: {color!r}")
+    return (
+        int(value[0:2], 16),
+        int(value[2:4], 16),
+        int(value[4:6], 16),
+    )
 
 
 def _rgb_to_hex(red: int, green: int, blue: int) -> str:
-    """Restituisce la rappresentazione esadecimale di un colore RGB."""
+    """Return the hexadecimal representation of an RGB color."""
 
     red = max(0, min(255, red))
     green = max(0, min(255, green))
@@ -149,7 +151,7 @@ def _rgb_to_hex(red: int, green: int, blue: int) -> str:
 
 
 def _blend_colors(start: str, end: str, ratio: float) -> str:
-    """Mescola due colori esadecimali restituendo una tonalità intermedia."""
+    """Blend two hexadecimal colors returning an intermediate shade."""
 
     ratio = max(0.0, min(1.0, ratio))
     start_r, start_g, start_b = _hex_to_rgb(start)
@@ -161,26 +163,26 @@ def _blend_colors(start: str, end: str, ratio: float) -> str:
 
 
 def _infer_process_family(record: OperationRecord) -> str:
-    """Classifica la lavorazione in famiglie tipiche del settore metalmeccanico."""
+    """Classify the operation into typical metalworking families."""
 
     tokens = "{} {}".format(record.process_type or "", record.process or "").lower()
-    if any(keyword in tokens for keyword in ("taglio", "laser", "plasma", "ossitaglio")):
-        return "Taglio e rifilo"
-    if any(keyword in tokens for keyword in ("pieg", "press", "calandr", "stamp")):
-        return "Piegatura e formatura"
-    if any(keyword in tokens for keyword in ("sald", "weld", "bras")):
-        return "Saldatura"
-    if any(keyword in tokens for keyword in ("assembl", "mont", "setup")):
-        return "Assemblaggio"
-    if any(keyword in tokens for keyword in ("vern", "coating", "finit", "paint")):
-        return "Finitura superficiale"
-    if any(keyword in tokens for keyword in ("controll", "collaudo", "quality")):
-        return "Controllo qualità"
-    return "Altro processo"
+    if any(keyword in tokens for keyword in ("cut", "laser", "plasma", "trim")):
+        return "Cutting & trimming"
+    if any(keyword in tokens for keyword in ("bend", "press", "roll", "stamp")):
+        return "Bending & forming"
+    if any(keyword in tokens for keyword in ("weld", "braze")):
+        return "Welding"
+    if any(keyword in tokens for keyword in ("assembl", "mount", "setup")):
+        return "Assembly"
+    if any(keyword in tokens for keyword in ("paint", "coating", "finish")):
+        return "Surface finishing"
+    if any(keyword in tokens for keyword in ("inspect", "test", "quality")):
+        return "Quality control"
+    return "Other process"
 
 
 def _infer_material_family(record: OperationRecord) -> str:
-    """Deduced il materiale lavorato dalle colonne aggiuntive quando disponibili."""
+    """Infer the processed material from extra columns when available."""
 
     for key in _MATERIAL_KEYWORDS:
         value = record.extra.get(key)
@@ -190,36 +192,36 @@ def _infer_material_family(record: OperationRecord) -> str:
         if not text or text == "nan":
             continue
         if any(token in text for token in ("inox", "aisi", "stainless")):
-            return "Acciaio inox"
-        if any(token in text for token in ("acciaio", "steel", "ferro")):
-            return "Acciai al carbonio"
-        if "allumin" in text or "aluminium" in text:
-            return "Alluminio"
-        if any(token in text for token in ("rame", "copper", "ottone", "brass")):
-            return "Rame / Ottone"
-        if any(token in text for token in ("ghisa", "cast iron")):
-            return "Ghisa"
+            return "Stainless steel"
+        if any(token in text for token in ("steel", "iron", "carbon")):
+            return "Carbon steels"
+        if "alumin" in text:
+            return "Aluminum"
+        if any(token in text for token in ("copper", "brass")):
+            return "Copper / Brass"
+        if "cast iron" in text:
+            return "Cast iron"
         return text.title()
-    return "Materiale non indicato"
+    return "Material not specified"
 
 
 def _infer_productivity_band(record: OperationRecord) -> str:
-    """Raggruppa la produttività oraria in fasce di performance."""
+    """Group hourly productivity into performance bands."""
 
     throughput = record.productivity_per_hour
     if throughput >= 120:
-        return "Top produttività (≥120 pz/ora)"
+        return "Top productivity (≥120 pcs/hour)"
     if throughput >= 80:
-        return "Alto rendimento (80-119 pz/ora)"
+        return "High yield (80-119 pcs/hour)"
     if throughput >= 50:
-        return "Produttività media (50-79 pz/ora)"
+        return "Average productivity (50-79 pcs/hour)"
     if throughput > 0:
-        return "Da ottimizzare (<50 pz/ora)"
-    return "Senza produzione"
+        return "Needs optimization (<50 pcs/hour)"
+    return "No production"
 
 
 def _combine_process_and_machine(record: OperationRecord) -> str:
-    """Combina processo e macchina per analizzare il carico degli impianti."""
+    """Combine process and machine to analyze plant load."""
 
     process = record.process or "-"
     machine = record.machine or "-"
@@ -232,10 +234,10 @@ def _load_toolkit() -> _Toolkit:
         from tkinter import filedialog, messagebox, ttk  # type: ignore
     except ModuleNotFoundError as exc:
         raise GUIUnavailableError(
-            "Tkinter non è disponibile in questo ambiente: installa il runtime grafico di Windows."
+            "Tkinter is not available in this environment: install the Windows graphical runtime."
         ) from exc
-    except Exception as exc:  # pragma: no cover - percorso imprevisto
-        raise GUIUnavailableError("Impossibile inizializzare Tkinter.") from exc
+    except Exception as exc:  # pragma: no cover - unexpected path
+        raise GUIUnavailableError("Unable to initialize Tkinter.") from exc
 
     return _Toolkit(tk=tk, ttk=ttk, messagebox=messagebox, filedialog=filedialog)
 
@@ -247,7 +249,7 @@ def launch_welcome_window(
     operations_loader: Callable[[Path], list[OperationRecord]] | None = None,
     _toolkit: Dict[str, object] | None = None,
 ) -> WelcomeWindowHandles | None:
-    """Mostra la finestra grafica principale di TruMetraPla."""
+    """Show the main TruMetraPla graphical window."""
 
     if _toolkit is None:
         toolkit = _load_toolkit()
@@ -259,8 +261,8 @@ def launch_welcome_window(
                 messagebox=_toolkit["messagebox"],
                 filedialog=_toolkit["filedialog"],
             )
-        except KeyError as exc:  # pragma: no cover - uso errato del parametro privato
-            raise GUIUnavailableError("Toolkit grafico incompleto.") from exc
+        except KeyError as exc:  # pragma: no cover - misuse of private parameter
+            raise GUIUnavailableError("Incomplete graphics toolkit.") from exc
 
         if (
             toolkit.tk is None
@@ -268,7 +270,7 @@ def launch_welcome_window(
             or toolkit.messagebox is None
             or toolkit.filedialog is None
         ):
-            raise GUIUnavailableError("Toolkit grafico non valido.")
+            raise GUIUnavailableError("Invalid graphics toolkit.")
 
     tk = toolkit.tk
     ttk = toolkit.ttk
@@ -280,47 +282,45 @@ def launch_welcome_window(
     else:
         root = root_factory()
 
-    root.title("TruMetraPla - Console Analitica")
-    root.geometry("1040x660")
+    root.title("TruMetraPla - Analytics Console")
+    root.geometry("1080x680")
     try:
-        root.minsize(900, 560)
-    except Exception:  # pragma: no cover - alcuni stub potrebbero non implementare minsize
+        root.minsize(920, 580)
+    except Exception:  # pragma: no cover - some stubs may not implement minsize
         pass
     root.resizable(True, True)
 
     try:
-        root.configure(background="#f5f5f5")
+        root.configure(background="#f4f6fb")
         root.option_add("*Font", "Segoe UI 10")
-        root.option_add("*TCombobox*Listbox*Background", "#0f172a")
-        root.option_add("*TCombobox*Listbox*Foreground", "#212121")
-        root.option_add("*TCombobox*Listbox*selectBackground", "#1976d2")
-    except Exception:  # pragma: no cover - alcuni stub di test non implementano configure
+    except Exception:  # pragma: no cover - some test stubs do not implement configure
         pass
 
     style = None
     if hasattr(ttk, "Style"):
         try:
             style = ttk.Style()
-        except Exception:  # pragma: no cover - alcuni toolkit fittizi possono fallire
+        except Exception:  # pragma: no cover - some fake toolkits may fail
             style = None
 
     if style is not None:
         base_theme = "clam"
-        neon_theme = "trumetrapla.neon"
+        app_theme = "TruMetraPla.light"
 
         def _safe_style_map(style_obj: object, style_name: str, **mapping: object) -> None:
             if hasattr(style_obj, "map"):
                 getattr(style_obj, "map")(style_name, **mapping)
+
         try:
             style.theme_create(
-                neon_theme,
+                app_theme,
                 parent=base_theme,
                 settings={
-                    "TFrame": {"configure": {"background": "#ffffff"}},
+                    "TFrame": {"configure": {"background": "#f4f6fb"}},
                     "TLabel": {
                         "configure": {
-                            "background": "#ffffff",
-                            "foreground": "#212121",
+                            "background": "#f4f6fb",
+                            "foreground": "#1f2937",
                             "font": ("Segoe UI", 10),
                         }
                     },
@@ -328,164 +328,144 @@ def launch_welcome_window(
                         "configure": {
                             "padding": (12, 8),
                             "borderwidth": 0,
-                            "background": "#1f2937",
-                            "foreground": "#212121",
+                            "background": "#2563eb",
+                            "foreground": "#ffffff",
                             "font": ("Segoe UI Semibold", 10),
                         }
                     },
                     "TCombobox": {
                         "configure": {
-                            "fieldbackground": "#0f172a",
-                            "background": "#0f172a",
-                            "foreground": "#212121",
+                            "fieldbackground": "#ffffff",
+                            "background": "#ffffff",
+                            "foreground": "#1f2937",
                             "padding": (8, 6),
                         }
                     },
                     "TScrollbar": {
                         "configure": {
-                            "background": "#0f172a",
-                            "troughcolor": "#ffffff",
-                            "bordercolor": "#0f172a",
-                            "arrowcolor": "#38bdf8",
+                            "background": "#cbd5e1",
+                            "troughcolor": "#f4f6fb",
+                            "bordercolor": "#cbd5e1",
+                            "arrowcolor": "#2563eb",
                         }
                     },
                 },
             )
-        except Exception:  # pragma: no cover - il tema potrebbe già esistere
+        except Exception:  # pragma: no cover - theme may already exist
             pass
 
         try:
-            style.theme_use(neon_theme)
-        except Exception:  # pragma: no cover - tema non disponibile
+            style.theme_use(app_theme)
+        except Exception:  # pragma: no cover - theme not available
             try:
                 style.theme_use(base_theme)
-            except Exception:  # pragma: no cover - tema non disponibile
+            except Exception:  # pragma: no cover - theme not available
                 pass
 
-        style.configure("Dashboard.TFrame", background="#ffffff")
+        style.configure("Dashboard.TFrame", background="#f4f6fb")
         style.configure(
             "Card.TFrame",
-            background="#0b1220",
-            borderwidth=0,
-            relief="flat",
+            background="#ffffff",
+            borderwidth=1,
+            relief="solid",
         )
         style.configure(
             "Header.TLabel",
             background="#ffffff",
-            foreground="#f8fafc",
-            font=("Segoe UI Semibold", 13),
+            foreground="#111827",
+            font=("Segoe UI Semibold", 14),
         )
         style.configure(
             "Info.TLabel",
             background="#ffffff",
-            foreground="#94a3b8",
+            foreground="#6b7280",
             font=("Segoe UI", 10),
         )
         style.configure(
             "Summary.TLabel",
             background="#ffffff",
-            foreground="#94a3b8",
+            foreground="#374151",
             font=("Segoe UI", 10),
         )
         style.configure(
             "Status.TLabel",
-            background="#ffffff",
-            foreground="#38bdf8",
+            background="#f4f6fb",
+            foreground="#2563eb",
             font=("Segoe UI", 9),
         )
         style.configure(
             "Credits.TLabel",
-            background="#ffffff",
-            foreground="#475569",
+            background="#f4f6fb",
+            foreground="#9ca3af",
             font=("Segoe UI", 9),
         )
         style.configure(
             "FilterLabel.TLabel",
-            background="#ffffff",
-            foreground="#7dd3fc",
+            background="#f4f6fb",
+            foreground="#374151",
             font=("Segoe UI Semibold", 9),
         )
         style.configure(
             "Accent.TButton",
-            background="#1976d2",
-            foreground="#f5f5f5",
+            background="#2563eb",
+            foreground="#ffffff",
             padding=(16, 8),
             font=("Segoe UI Semibold", 10),
         )
         style.configure(
             "Secondary.TButton",
-            background="#1f2937",
-            foreground="#212121",
+            background="#e5e7eb",
+            foreground="#1f2937",
             padding=(14, 8),
             font=("Segoe UI", 10),
         )
         _safe_style_map(
             style,
             "Accent.TButton",
-            background=[("active", "#38bdf8"), ("pressed", "#0ea5e9")],
-            foreground=[("disabled", "#64748b")],
+            background=[("active", "#1d4ed8"), ("pressed", "#1e40af")],
+            foreground=[("disabled", "#9ca3af")],
         )
         _safe_style_map(
             style,
             "Secondary.TButton",
-            background=[("active", "#27364a"), ("pressed", "#1b2639")],
-            foreground=[("disabled", "#475569")],
+            background=[("active", "#d1d5db"), ("pressed", "#cbd5e1")],
+            foreground=[("disabled", "#9ca3af")],
         )
         _safe_style_map(
             style,
             "TCombobox",
-            fieldbackground=[("readonly", "#0f172a")],
-            background=[("readonly", "#0f172a")],
-            foreground=[("readonly", "#212121")],
-            selectbackground=[("readonly", "#1d4ed8")],
-            selectforeground=[("readonly", "#f8fafc")],
-        )
-        style.configure(
-            "Tech.Treeview",
-            background="#0b1220",
-            fieldbackground="#0b1220",
-            foreground="#212121",
-            rowheight=28,
-            bordercolor="#1f2937",
+            fieldbackground=[("readonly", "#ffffff")],
+            background=[("readonly", "#ffffff")],
+            foreground=[("readonly", "#1f2937")],
+            selectbackground=[("readonly", "#2563eb")],
+            selectforeground=[("readonly", "#ffffff")],
         )
         style.configure(
             "Treeview",
-            background="#0b1220",
-            fieldbackground="#0b1220",
-            foreground="#212121",
+            background="#ffffff",
+            fieldbackground="#ffffff",
+            foreground="#1f2937",
             rowheight=28,
+            bordercolor="#e5e7eb",
         )
         _safe_style_map(
             style,
-            "Tech.Treeview",
-            background=[("selected", "#1d4ed8")],
-            foreground=[("selected", "#f8fafc")],
-        )
-        style.configure(
-            "Tech.Treeview.Heading",
-            background="#111c2f",
-            foreground="#38bdf8",
-            relief="flat",
-            font=("Segoe UI Semibold", 10),
+            "Treeview",
+            background=[("selected", "#dbeafe")],
+            foreground=[("selected", "#1e3a8a")],
         )
         style.configure(
             "Treeview.Heading",
-            background="#111c2f",
-            foreground="#38bdf8",
+            background="#f1f5f9",
+            foreground="#1f2937",
             relief="flat",
             font=("Segoe UI Semibold", 10),
         )
         _safe_style_map(
             style,
-            "Tech.Treeview.Heading",
-            background=[("active", "#1f2a44")],
-            foreground=[("pressed", "#0ea5e9")],
-        )
-        _safe_style_map(
-            style,
             "Treeview.Heading",
-            background=[("active", "#1f2a44")],
-            foreground=[("pressed", "#0ea5e9")],
+            background=[("active", "#e2e8f0")],
+            foreground=[("pressed", "#2563eb")],
         )
 
     state = _AppState()
@@ -495,28 +475,28 @@ def launch_welcome_window(
         specs: OrderedDict[str, ColumnSpec] = OrderedDict()
         specs["date"] = ColumnSpec(
             identifier="date",
-            label="Data",
+            label="Date",
             getter=lambda record: record.date.strftime("%d/%m/%Y"),
             width=110,
             grouping_key="date",
         )
         specs["employee"] = ColumnSpec(
             identifier="employee",
-            label="Dipendente",
+            label="Employee",
             getter=lambda record: record.employee or "-",
             anchor="w",
             grouping_key="employee",
         )
         specs["process"] = ColumnSpec(
             identifier="process",
-            label="Processo",
+            label="Process",
             getter=lambda record: record.process or "-",
             anchor="w",
             grouping_key="process",
         )
         specs["process_type"] = ColumnSpec(
             identifier="process_type",
-            label="Tipo processo",
+            label="Process type",
             getter=lambda record: record.process_type or "-",
             anchor="w",
             width=150,
@@ -524,26 +504,26 @@ def launch_welcome_window(
         )
         specs["machine"] = ColumnSpec(
             identifier="machine",
-            label="Macchina",
+            label="Machine",
             getter=lambda record: record.machine or "-",
             anchor="w",
             grouping_key="machine",
         )
         specs["quantity"] = ColumnSpec(
             identifier="quantity",
-            label="Pezzi",
+            label="Pieces",
             getter=lambda record: f"{record.quantity}",
             width=100,
         )
         specs["duration_minutes"] = ColumnSpec(
             identifier="duration_minutes",
-            label="Durata (min)",
+            label="Duration (min)",
             getter=lambda record: f"{record.duration_minutes:.1f}",
             width=110,
         )
         specs["throughput"] = ColumnSpec(
             identifier="throughput",
-            label="Pezzi/ora",
+            label="Pieces/hour",
             getter=lambda record: f"{record.productivity_per_hour:.2f}",
             width=110,
         )
@@ -556,7 +536,7 @@ def launch_welcome_window(
     def _slugify_extra(label: str, used: set[str]) -> str:
         token = re.sub(r"[^0-9a-z]+", "_", label.lower()).strip("_")
         if not token:
-            token = "colonna"
+            token = "column"
         base = f"extra_{token}"
         identifier = base
         counter = 1
@@ -588,32 +568,32 @@ def launch_welcome_window(
             grouping_accessors[identifier] = accessor
             grouping_labels[identifier] = label
 
-        _register_grouping("process", "Processo", lambda record: record.process or "")
-        _register_grouping("employee", "Dipendente", lambda record: record.employee or "")
-        _register_grouping("machine", "Macchina", lambda record: record.machine or "")
+        _register_grouping("process", "Process", lambda record: record.process or "")
+        _register_grouping("employee", "Employee", lambda record: record.employee or "")
+        _register_grouping("machine", "Machine", lambda record: record.machine or "")
         _register_grouping(
             "process_type",
-            "Tipo processo",
+            "Process type",
             lambda record: record.process_type or "",
         )
         _register_grouping(
             "derived:process_machine",
-            "Processo e macchina",
+            "Process and machine",
             _combine_process_and_machine,
         )
         _register_grouping(
             "derived:process_family",
-            "Famiglia lavorazione (metalmeccanica)",
+            "Process family (metalworking)",
             _infer_process_family,
         )
         _register_grouping(
             "derived:productivity_band",
-            "Classe produttività pezzi/ora",
+            "Productivity class (pieces/hour)",
             _infer_productivity_band,
         )
         _register_grouping(
             "derived:material_family",
-            "Materiale lavorato",
+            "Material processed",
             _infer_material_family,
         )
 
@@ -668,17 +648,17 @@ def launch_welcome_window(
                 control = state.filter_controls.pop(identifier)
                 try:
                     control.frame.destroy()
-                except Exception:  # pragma: no cover - widget già rimosso
+                except Exception:  # pragma: no cover - widget already removed
                     pass
 
-    # Variabili di stato testuali
-    file_var = tk.StringVar(value="Nessun file caricato")
+    # Textual state variables
+    file_var = tk.StringVar(value="No file loaded")
     summary_var = tk.StringVar(
-        value="Carica un file Excel per attivare la console olografica dei KPI"
+        value="Load an Excel file to activate the KPI dashboard"
     )
-    status_var = tk.StringVar(value="Sistema pronto • Nessun dataset caricato")
+    status_var = tk.StringVar(value="System ready • No dataset loaded")
 
-    # Menu principale
+    # Main menu
     menubar = tk.Menu(root)
     file_menu = tk.Menu(menubar, tearoff=0)
     tools_menu = tk.Menu(menubar, tearoff=0)
@@ -715,7 +695,7 @@ def launch_welcome_window(
                     continue
                 try:
                     value = spec.getter(record)
-                except Exception:  # pragma: no cover - getter personalizzato errato
+                except Exception:  # pragma: no cover - invalid custom getter
                     value = ""
                 if not isinstance(value, str):
                     value = "" if value is None else str(value)
@@ -726,7 +706,7 @@ def launch_welcome_window(
 
     def _format_summary(records: list[OperationRecord]) -> str:
         if not records:
-            return "Nessun dato disponibile"
+            return "No data available"
 
         summary = summarize_operations(records)
         machines = len({record.machine for record in records if record.machine})
@@ -734,9 +714,9 @@ def launch_welcome_window(
             {record.process_type for record in records if record.process_type}
         )
         return (
-            "⟡ Record totali: {records} • Quantità: {qty} • Ore: {hours:.2f} • "
-            "Throughput medio: {throughput:.2f} pezzi/ora • Dipendenti: {employees} • "
-            "Processi: {processes} • Macchine: {machines} • Tipi processo: {process_types}"
+            "⟡ Total records: {records} • Quantity: {qty} • Hours: {hours:.2f} • "
+            "Average throughput: {throughput:.2f} pieces/hour • Employees: {employees} • "
+            "Processes: {processes} • Machines: {machines} • Process types: {process_types}"
         ).format(
             records=len(records),
             qty=summary.total_quantity,
@@ -753,9 +733,9 @@ def launch_welcome_window(
         label: str,
         *,
         accessor: Callable[[OperationRecord], object],
-        default_label: str = "Tutti",
+        default_label: str = "All",
         width: int = 24,
-        missing_label: str = "Non specificato",
+        missing_label: str = "Not specified",
     ) -> FilterControl:
         if identifier in state.filter_controls:
             return state.filter_controls[identifier]
@@ -833,13 +813,13 @@ def launch_welcome_window(
         available = _available_filter_fields()
         if not available:
             messagebox.showinfo(
-                "Nessun campo disponibile",
-                "Tutti i campi filtrabili sono già stati aggiunti.",
+                "No fields available",
+                "All filterable fields have already been added.",
             )
             return
 
         dialog = tk.Toplevel(root)
-        dialog.title("Aggiungi filtro")
+        dialog.title("Add filter")
         dialog.geometry("320x160")
         dialog.transient(root)
 
@@ -848,7 +828,7 @@ def launch_welcome_window(
 
         ttk.Label(
             container,
-            text="Seleziona il campo da aggiungere ai filtri.",
+            text="Select the field to add to the filters.",
             justify="left",
         ).pack(anchor="w", pady=(0, 12))
 
@@ -874,13 +854,13 @@ def launch_welcome_window(
             label = selection_var.get()
             identifier = mapping.get(label)
             if not identifier:
-                feedback_var.set("Seleziona un campo valido.")
+                feedback_var.set("Select a valid field.")
                 return
 
             accessor = state.grouping_accessors.get(identifier)
             if accessor is None:
                 feedback_var.set(
-                    "Il campo selezionato non è disponibile in questa analisi."
+                    "The selected field is not available in this analysis."
                 )
                 return
 
@@ -888,7 +868,7 @@ def launch_welcome_window(
                 identifier,
                 label,
                 accessor=accessor,
-                default_label="Tutti",
+                default_label="All",
             )
             if state.records:
                 _populate_filter_control(control, state.records)
@@ -897,14 +877,14 @@ def launch_welcome_window(
         actions = ttk.Frame(container)
         actions.pack(fill="x", pady=(16, 0))
 
-        ttk.Button(actions, text="Annulla", command=dialog.destroy).pack(
+        ttk.Button(actions, text="Cancel", command=dialog.destroy).pack(
             side="right", padx=(0, 8)
         )
-        ttk.Button(actions, text="Aggiungi", command=_confirm).pack(side="right")
+        ttk.Button(actions, text="Add", command=_confirm).pack(side="right")
 
         try:
             dialog.grab_set()
-        except Exception:  # pragma: no cover - ambienti headless
+        except Exception:  # pragma: no cover - headless environments
             pass
         dialog.focus_force()
         if hasattr(root, "wait_window"):
@@ -915,9 +895,9 @@ def launch_welcome_window(
     def _apply_filters() -> None:
         if not state.records:
             summary_var.set(
-                "Nessun dato da filtrare • importa un file Excel per iniziare."
+                "No data to filter • import an Excel file to start."
             )
-            status_var.set("Filtri sospesi • In attesa di dati")
+            status_var.set("Filters pending • Waiting for data")
             tree.delete(*tree.get_children())
             return
 
@@ -943,8 +923,8 @@ def launch_welcome_window(
         _update_table(filtered)
         summary_var.set(_format_summary(filtered))
         status_var.set(
-            "Filtri attivi • {visibili}/{totali} record visibili".format(
-                visibili=len(filtered), totali=len(state.records)
+            "Active filters • {visible}/{total} records visible".format(
+                visible=len(filtered), total=len(state.records)
             )
         )
 
@@ -956,27 +936,27 @@ def launch_welcome_window(
     def _prompt_column_mapping(excel_path: Path) -> dict[str, str] | None:
         try:
             import pandas as pd
-        except ModuleNotFoundError as exc:  # pragma: no cover - dipendenza obbligatoria
+        except ModuleNotFoundError as exc:  # pragma: no cover - required dependency
             messagebox.showerror(
-                "Pandas non disponibile",
-                "Installa la dipendenza 'pandas' per importare file Excel.",
+                "Pandas not available",
+                "Install the 'pandas' dependency to import Excel files.",
             )
-            raise GUIUnavailableError("Pandas richiesto per la gestione dei file Excel") from exc
+            raise GUIUnavailableError("Pandas required for Excel file handling") from exc
 
         try:
             preview = pd.read_excel(excel_path, sheet_name=0, nrows=25)
-        except Exception as exc:  # pragma: no cover - errori di I/O imprevisti
+        except Exception as exc:  # pragma: no cover - unexpected I/O errors
             messagebox.showerror(
-                "Errore di lettura",
-                f"Impossibile leggere le intestazioni del file: {exc}",
+                "Read error",
+                f"Unable to read file headers: {exc}",
             )
             return None
 
         columns = list(preview.columns)
         if not columns:
             messagebox.showerror(
-                "Intestazioni mancanti",
-                "Il file Excel selezionato non contiene alcuna intestazione di colonna.",
+                "Missing headers",
+                "The selected Excel file contains no column headers.",
             )
             return None
 
@@ -987,18 +967,18 @@ def launch_welcome_window(
         suggestions, _missing = suggest_column_mapping(
             columns, column_samples=column_samples
         )
-        option_values = ["(Seleziona)"] + columns
+        option_values = ["(Select)"] + columns
 
         field_labels: dict[str, str] = {
-            "date": "Data (obbligatoria)",
-            "employee": "Dipendente",
-            "process": "Processo",
-            "quantity": "Quantità prodotta",
-            "duration_minutes": "Durata in minuti",
+            "date": "Date (required)",
+            "employee": "Employee",
+            "process": "Process",
+            "quantity": "Quantity produced",
+            "duration_minutes": "Duration in minutes",
         }
 
         dialog = tk.Toplevel(root)
-        dialog.title("Associa colonne Excel")
+        dialog.title("Map Excel columns")
         dialog.geometry("480x360")
         dialog.transient(root)
 
@@ -1008,8 +988,8 @@ def launch_welcome_window(
         ttk.Label(
             container,
             text=(
-                "Abbina i campi richiesti alle colonne del file Excel."
-                " Le scelte verranno salvate per questa importazione."
+                "Match the required fields to the Excel file columns."
+                " Selections will be saved for this import."
             ),
             wraplength=430,
             justify="left",
@@ -1025,7 +1005,7 @@ def launch_welcome_window(
             var = tk.StringVar()
             values = option_values
             if field in optional_fields:
-                values = ["(Facoltativo)"] + columns
+                values = ["(Optional)"] + columns
             combo = ttk.Combobox(
                 row,
                 state="readonly",
@@ -1058,14 +1038,14 @@ def launch_welcome_window(
 
             for field, var in mapping_vars.items():
                 value = var.get()
-                if field in optional_fields and value == "(Facoltativo)":
+                if field in optional_fields and value == "(Optional)":
                     continue
-                if value == "(Seleziona)":
-                    feedback_var.set("Completa la selezione di tutte le colonne richieste.")
+                if value == "(Select)":
+                    feedback_var.set("Complete the selection of all required columns.")
                     return
                 if value in used_columns:
                     feedback_var.set(
-                        "Ogni colonna può essere assegnata a un solo campo. Rivedi la selezione."
+                        "Each column can be assigned to only one field. Review the selection."
                     )
                     return
                 used_columns.add(value)
@@ -1078,28 +1058,28 @@ def launch_welcome_window(
             result = None
             dialog.destroy()
 
-        ttk.Button(actions, text="Annulla", command=_cancel).pack(side="right", padx=(0, 8))
+        ttk.Button(actions, text="Cancel", command=_cancel).pack(side="right", padx=(0, 8))
         ttk.Button(actions, text="OK", command=_confirm).pack(side="right")
 
         try:
             dialog.grab_set()
-        except Exception:  # pragma: no cover - alcuni ambienti headless
+        except Exception:  # pragma: no cover - some headless environments
             pass
         dialog.focus_force()
 
         if hasattr(root, "wait_window"):
             root.wait_window(dialog)
-        else:  # pragma: no cover - fallback per stub di test
+        else:  # pragma: no cover - fallback for test stubs
             dialog.mainloop()
 
         return result
 
     def _open_file() -> None:
         path_str = filedialog.askopenfilename(
-            title="Seleziona un file Excel",
+            title="Select an Excel file",
             filetypes=(
-                ("File Excel", "*.xlsx *.xlsm *.xls *.xlsb"),
-                ("Tutti i file", "*.*"),
+                ("Excel files", "*.xlsx *.xlsm *.xls *.xlsb"),
+                ("All files", "*.*"),
             ),
         )
 
@@ -1111,29 +1091,29 @@ def launch_welcome_window(
         try:
             records = loader(excel_path)
         except FileNotFoundError:
-            messagebox.showerror("File non trovato", f"Il file {excel_path} non esiste.")
+            messagebox.showerror("File not found", f"The file {excel_path} does not exist.")
             return
         except ColumnMappingError:
             mapping = _prompt_column_mapping(excel_path)
             if not mapping:
-                status_var.set("Importazione annullata: abbina le colonne richieste.")
+                status_var.set("Import cancelled: map the required columns.")
                 return
             try:
                 records = load_operations_from_excel(excel_path, column_mapping=mapping)
             except ColumnMappingError as exc:
-                messagebox.showerror("Colonne mancanti", str(exc))
+                messagebox.showerror("Missing columns", str(exc))
                 return
-            except Exception as exc:  # pragma: no cover - errori imprevisti
-                messagebox.showerror("Errore", f"Impossibile leggere il file: {exc}")
+            except Exception as exc:  # pragma: no cover - unexpected errors
+                messagebox.showerror("Error", f"Unable to read the file: {exc}")
                 return
-        except Exception as exc:  # pragma: no cover - errori imprevisti
-            messagebox.showerror("Errore", f"Impossibile leggere il file: {exc}")
+        except Exception as exc:  # pragma: no cover - unexpected errors
+            messagebox.showerror("Error", f"Unable to read the file: {exc}")
             return
 
         state.records = records
         state.file_path = excel_path
-        file_var.set(f"File corrente: {excel_path}")
-        status_var.set(f"Dataset attivo • {len(records)} record caricati")
+        file_var.set(f"Current file: {excel_path}")
+        status_var.set(f"Active dataset • {len(records)} records loaded")
         _refresh_column_specs(records)
         _refresh_filters(records)
         _apply_filters()
@@ -1141,18 +1121,18 @@ def launch_welcome_window(
     def _open_column_manager() -> None:
         if not state.column_specs:
             messagebox.showinfo(
-                "Colonne non disponibili",
-                "Carica un file Excel per personalizzare la tabella.",
+                "Columns not available",
+                "Load an Excel file to customize the table.",
             )
             return
 
         dialog = tk.Toplevel(root)
-        dialog.title("Configura colonne visibili")
+        dialog.title("Configure visible columns")
         dialog.geometry("360x420")
         dialog.transient(root)
         try:
-            dialog.configure(background="#f5f5f5")
-        except Exception:  # pragma: no cover - stub di test
+            dialog.configure(background="#f4f6fb")
+        except Exception:  # pragma: no cover - test stubs
             pass
 
         container = ttk.Frame(dialog, padding=16, style="Card.TFrame")
@@ -1160,7 +1140,7 @@ def launch_welcome_window(
 
         ttk.Label(
             container,
-            text="Seleziona le colonne da mostrare nella tabella principale.",
+            text="Select the columns to show in the main table.",
             wraplength=320,
             justify="left",
             style="Info.TLabel",
@@ -1196,27 +1176,27 @@ def launch_welcome_window(
                 column_id for column_id, var in bool_vars.items() if bool(var.get())
             ]
             if not selected:
-                feedback_var.set("Seleziona almeno una colonna da visualizzare.")
+                feedback_var.set("Select at least one column to display.")
                 return
 
             state.visible_columns = selected
             current = state.filtered_records or state.records
             _update_table(current)
             status_var.set(
-                "Colonne aggiornate ({})".format(
+                "Columns updated ({})".format(
                     ", ".join(state.column_specs[col].label for col in selected)
                 )
             )
             dialog.destroy()
 
-        ttk.Button(actions, text="Annulla", command=dialog.destroy).pack(
+        ttk.Button(actions, text="Cancel", command=dialog.destroy).pack(
             side="right", padx=(0, 8)
         )
-        ttk.Button(actions, text="Applica", command=_confirm_columns).pack(side="right")
+        ttk.Button(actions, text="Apply", command=_confirm_columns).pack(side="right")
 
         try:
             dialog.grab_set()
-        except Exception:  # pragma: no cover - ambienti headless
+        except Exception:  # pragma: no cover - headless environments
             pass
         dialog.focus_force()
         if hasattr(root, "wait_window"):
@@ -1227,8 +1207,8 @@ def launch_welcome_window(
     def _show_kpi_dialog() -> None:
         if not state.filtered_records:
             messagebox.showinfo(
-                "Nessun dato",
-                "Carica un file Excel e applica eventuali filtri per visualizzare i KPI.",
+                "No data",
+                "Load an Excel file and apply filters to view KPIs.",
             )
             return
 
@@ -1238,20 +1218,20 @@ def launch_welcome_window(
 
         def _format_entities(entities: list) -> str:
             if not entities:
-                return "Nessuno"
+                return "None"
             return "\n".join(
-                f"- {item.entity}: {item.total_quantity} pezzi ({item.throughput:.2f} pz/ora)"
+                f"- {item.entity}: {item.total_quantity} pieces ({item.throughput:.2f} pcs/hour)"
                 for item in entities
             )
 
         message = (
-            "Quantità totali: {qty}\n"
-            "Ore totali: {hours:.2f}\n"
-            "Throughput medio: {throughput:.2f} pezzi/ora\n"
-            "Dipendenti unici: {employees}\n"
-            "Processi monitorati: {processes}\n\n"
-            "Top dipendenti:\n{top_employees}\n\n"
-            "Top processi:\n{top_processes}"
+            "Total quantity: {qty}\n"
+            "Total hours: {hours:.2f}\n"
+            "Average throughput: {throughput:.2f} pieces/hour\n"
+            "Unique employees: {employees}\n"
+            "Processes monitored: {processes}\n\n"
+            "Top employees:\n{top_employees}\n\n"
+            "Top processes:\n{top_processes}"
         ).format(
             qty=summary.total_quantity,
             hours=summary.total_hours,
@@ -1262,39 +1242,39 @@ def launch_welcome_window(
             top_processes=_format_entities(top_processes),
         )
 
-        messagebox.showinfo("KPI principali", message)
+        messagebox.showinfo("Key KPIs", message)
 
     def _show_pie_chart() -> None:
         records = state.filtered_records or state.records
         if not records:
             messagebox.showinfo(
-                "Nessun dato",
-                "Carica un file Excel e applica eventuali filtri per generare il grafico.",
+                "No data",
+                "Load an Excel file and apply filters to generate the chart.",
             )
             return
 
         try:
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
             from matplotlib.figure import Figure
-        except ModuleNotFoundError:  # pragma: no cover - dipendenza opzionale
+        except ModuleNotFoundError:  # pragma: no cover - optional dependency
             messagebox.showerror(
-                "Matplotlib non disponibile",
-                "Installa la dipendenza opzionale 'matplotlib' per visualizzare i grafici.",
+                "Matplotlib not available",
+                "Install the optional 'matplotlib' dependency to view charts.",
             )
             return
-        except Exception as exc:  # pragma: no cover - errori imprevisti
+        except Exception as exc:  # pragma: no cover - unexpected errors
             messagebox.showerror(
-                "Errore grafico",
-                f"Impossibile inizializzare il motore di grafici: {exc}",
+                "Chart error",
+                f"Unable to initialize the chart engine: {exc}",
             )
             return
 
         chart_window = tk.Toplevel(root)
-        chart_window.title("Report grafico TruMetraPla")
+        chart_window.title("TruMetraPla Chart Report")
         chart_window.geometry("720x520")
         try:
             chart_window.minsize(560, 420)
-        except Exception:  # pragma: no cover - alcuni stub non implementano minsize
+        except Exception:  # pragma: no cover - some stubs do not implement minsize
             pass
 
         container = ttk.Frame(chart_window, padding=16)
@@ -1302,7 +1282,7 @@ def launch_welcome_window(
 
         heading = ttk.Label(
             container,
-            text="Distribuzione dei pezzi prodotti",
+            text="Production quantity distribution",
             font=("Segoe UI", 12, "bold"),
         )
         heading.pack(anchor="w")
@@ -1310,11 +1290,11 @@ def launch_welcome_window(
         options_frame = ttk.Frame(container)
         options_frame.pack(fill="x", pady=(12, 8))
 
-        ttk.Label(options_frame, text="Raggruppa per:").pack(side="left")
+        ttk.Label(options_frame, text="Group by:").pack(side="left")
 
         grouping_items = list(state.grouping_labels.items()) or [
-            ("process", "Processo"),
-            ("employee", "Dipendente"),
+            ("process", "Process"),
+            ("employee", "Employee"),
         ]
         grouping_labels = [label for _identifier, label in grouping_items]
         grouping_lookup = {label: identifier for identifier, label in grouping_items}
@@ -1337,13 +1317,13 @@ def launch_welcome_window(
         export_frame.pack(fill="x", pady=(6, 0))
 
         def _export_chart(fmt: str) -> None:
-            default_name = f"grafico-produzione.{fmt}"
+            default_name = f"production-chart.{fmt}"
             if fmt == "pdf":
-                filetypes = [("Documento PDF", "*.pdf")]
+                filetypes = [("PDF document", "*.pdf")]
             else:
-                filetypes = [("Immagine JPEG", "*.jpg;*.jpeg"), ("Tutti i file", "*.*")]
+                filetypes = [("JPEG image", "*.jpg;*.jpeg"), ("All files", "*.*")]
             path = filedialog.asksaveasfilename(
-                title="Esporta grafico",
+                title="Export chart",
                 defaultextension=f".{fmt}",
                 filetypes=filetypes,
                 initialfile=default_name,
@@ -1353,21 +1333,21 @@ def launch_welcome_window(
             try:
                 save_format = "jpeg" if fmt == "jpg" else fmt
                 figure.savefig(path, format=save_format, bbox_inches="tight")
-                info_var.set(f"Grafico esportato in {path}")
-            except Exception as exc:  # pragma: no cover - errori scrittura disco
+                info_var.set(f"Chart exported to {path}")
+            except Exception as exc:  # pragma: no cover - disk write errors
                 messagebox.showerror(
-                    "Errore esportazione",
-                    f"Impossibile salvare il grafico: {exc}",
+                    "Export error",
+                    f"Unable to save the chart: {exc}",
                 )
 
         ttk.Button(
             export_frame,
-            text="Salva PDF",
+            text="Save PDF",
             command=lambda: _export_chart("pdf"),
         ).pack(side="right", padx=4)
         ttk.Button(
             export_frame,
-            text="Salva JPG",
+            text="Save JPG",
             command=lambda: _export_chart("jpg"),
         ).pack(side="right", padx=4)
 
@@ -1378,10 +1358,10 @@ def launch_welcome_window(
 
         def _normalize_group_value(value: object) -> str:
             if value is None:
-                return "Non specificato"
+                return "Not specified"
             if isinstance(value, str):
                 text = value.strip()
-                return text if text else "Non specificato"
+                return text if text else "Not specified"
             return str(value)
 
         def _build_breakdown(identifier: str) -> list[tuple[str, int]]:
@@ -1406,7 +1386,7 @@ def launch_welcome_window(
             breakdown = _build_breakdown(identifier)
             if not breakdown:
                 info_var.set(
-                    "Non sono disponibili dati con quantità positive per il grafico selezionato."
+                    "No data with positive quantities available for the selected chart."
                 )
                 axis.clear()
                 canvas.draw_idle()
@@ -1421,7 +1401,7 @@ def launch_welcome_window(
 
             def _format_pct(pct: float) -> str:
                 absolute = int(round(pct * total / 100.0))
-                return f"{pct:.1f}% ({absolute} pezzi)"
+                return f"{pct:.1f}% ({absolute} pieces)"
 
             axis.pie(
                 values,
@@ -1429,319 +1409,114 @@ def launch_welcome_window(
                 autopct=_format_pct,
                 startangle=90,
             )
-            axis.set_title(f"Distribuzione pezzi per {selected_label.lower()}")
+            axis.set_title(f"Quantity distribution by {selected_label.lower()}")
             axis.axis("equal")
             canvas.draw_idle()
 
         grouping_combo.bind("<<ComboboxSelected>>", _refresh_chart)
         _refresh_chart()
 
-    file_menu.add_command(label="Apri file Excel…", command=_open_file)
-    file_menu.add_separator()
-    file_menu.add_command(label="Esci", command=root.destroy)
-
-    tools_menu.add_command(label="Mostra KPI filtrati", command=_show_kpi_dialog)
-    tools_menu.add_command(label="Grafico a torta", command=_show_pie_chart)
-
-    def _open_docs() -> None:
-        import webbrowser
-
-        webbrowser.open(
-            "https://github.com/FrancescoCastaldi/TruMetraPla#readme",
-            new=2,
-        )
-
-    help_menu.add_command(label="Documentazione", command=_open_docs)
-
+    # Build the main layout
     menubar.add_cascade(label="File", menu=file_menu)
-    menubar.add_cascade(label="Strumenti", menu=tools_menu)
-    menubar.add_cascade(label="Aiuto", menu=help_menu)
+    menubar.add_cascade(label="Tools", menu=tools_menu)
+    menubar.add_cascade(label="Help", menu=help_menu)
+
+    file_menu.add_command(label="Open Excel file...", command=_open_file)
+    file_menu.add_separator()
+    file_menu.add_command(label="Exit", command=root.destroy)
+
+    tools_menu.add_command(label="Add filter", command=_prompt_add_filter)
+    tools_menu.add_command(label="Configure columns", command=_open_column_manager)
+    tools_menu.add_separator()
+    tools_menu.add_command(label="Show KPIs", command=_show_kpi_dialog)
+    tools_menu.add_command(label="Show chart", command=_show_pie_chart)
+
+    help_menu.add_command(
+        label="About",
+        command=lambda: messagebox.showinfo(
+            "About TruMetraPla",
+            "TruMetraPla - Industrial productivity analysis tool.\n\n"
+            "Analyze Excel production data, generate KPIs, and prepare professional reports.",
+        ),
+    )
 
     try:
         root.config(menu=menubar)
-    except Exception:  # pragma: no cover - alcuni stub potrebbero non implementare config
+    except Exception:  # pragma: no cover - some test stubs do not implement config
         pass
 
-    header_canvas = None
-    if hasattr(tk, "Canvas"):
-        header_canvas = tk.Canvas(
-            root,
-            height=120,
-            highlightthickness=0,
-            borderwidth=0,
-            background="#f5f5f5",
-        )
-        header_canvas.pack(fill="x")
+    # Header
+    header = ttk.Frame(root, style="Dashboard.TFrame")
+    header.pack(fill="x", padx=16, pady=(16, 8))
 
-        accent_bar = tk.Frame(root, height=2, background="#1976d2", borderwidth=0)
-        accent_bar.pack(fill="x")
-
-        def _draw_header_gradient(_event: object | None = None) -> None:
-            width = max(header_canvas.winfo_width(), 1)
-            height = max(header_canvas.winfo_height(), 1)
-            header_canvas.delete("gradient")
-            header_canvas.delete("text")
-            header_canvas.delete("accent")
-
-            step = max(int(width / 240), 1)
-            for index in range(0, width, step):
-                ratio = index / max(width - 1, 1)
-                color = _blend_colors("#0b1220", "#1f2a44", ratio)
-                header_canvas.create_line(
-                    index,
-                    0,
-                    index,
-                    height,
-                    tags="gradient",
-                    fill=color,
-                )
-
-            header_canvas.create_text(
-                32,
-                36,
-                anchor="w",
-                text="TRUMETRAPLA ANALYTICS HUB",
-                font=("Segoe UI Semibold", 18),
-                fill="#f8fafc",
-                tags="text",
-            )
-            header_canvas.create_text(
-                32,
-                78,
-                anchor="w",
-                text="Console futuristica per la produttività metalmeccanica",
-                font=("Segoe UI", 11),
-                fill="#38bdf8",
-                tags="text",
-            )
-
-            if width > 360:
-                polygon_width = min(260, max(180, width // 5))
-                x1 = width - 32
-                x0 = max(32, x1 - polygon_width)
-                y0 = 28
-                y1 = height - 28
-                mid = (y0 + y1) / 2
-                header_canvas.create_polygon(
-                    x0,
-                    y0,
-                    x1 - 32,
-                    y0,
-                    x1,
-                    mid,
-                    x1 - 32,
-                    y1,
-                    x0,
-                    y1,
-                    x0 - 28,
-                    mid,
-                    tags="accent",
-                    outline="#1976d2",
-                    fill="#f5f5f5",
-                    width=2,
-                )
-                header_canvas.create_line(
-                    x0,
-                    y0,
-                    x1 - 32,
-                    y0,
-                    fill="#38bdf8",
-                    width=2,
-                    tags="accent",
-                )
-                header_canvas.create_line(
-                    x0,
-                    y1,
-                    x1 - 32,
-                    y1,
-                    fill="#38bdf8",
-                    width=2,
-                    tags="accent",
-                )
-
-            header_canvas.tag_lower("gradient")
-
-        header_canvas.bind("<Configure>", _draw_header_gradient)
-        _draw_header_gradient()
-
-    # Layout principale
-    main_frame = ttk.Frame(root, padding=28, style="Dashboard.TFrame")
-    main_frame.pack(expand=True, fill="both")
-
-    header = ttk.Frame(main_frame, style="Dashboard.TFrame")
-    header.pack(fill="x")
+    ttk.Label(
+        header,
+        text="TruMetraPla",
+        style="Header.TLabel",
+    ).pack(side="left")
 
     ttk.Label(
         header,
         textvariable=file_var,
-        font=("Segoe UI", 11, "bold"),
-        anchor="w",
-        style="Header.TLabel",
-    ).pack(
-        fill="x", pady=(0, 4)
-    )
+        style="Info.TLabel",
+    ).pack(side="right")
+
+    # Filters bar
+    filters_frame = ttk.Frame(root, style="Dashboard.TFrame")
+    filters_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+    # Summary bar
+    summary_bar = ttk.Frame(root, style="Card.TFrame")
+    summary_bar.pack(fill="x", padx=16, pady=(0, 8))
+
     ttk.Label(
-        header,
+        summary_bar,
         textvariable=summary_var,
-        wraplength=920,
-        anchor="w",
         style="Summary.TLabel",
-    ).pack(fill="x")
+        wraplength=1000,
+    ).pack(fill="x", padx=12, pady=10)
 
-    filters_frame = ttk.Frame(main_frame, style="Dashboard.TFrame")
-    filters_frame.pack(fill="x", pady=12)
+    # Table
+    table_frame = ttk.Frame(root, style="Card.TFrame")
+    table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 8))
 
-    state.filter_controls.clear()
-
-    base_filters = [
-        (
-            "employee",
-            "Dipendente",
-            lambda record: record.employee or "",
-            "Tutti",
-            28,
-        ),
-        (
-            "process",
-            "Processo",
-            lambda record: record.process or "",
-            "Tutti",
-            28,
-        ),
-        (
-            "machine",
-            "Macchina",
-            lambda record: record.machine or "",
-            "Tutte",
-            24,
-        ),
-        (
-            "process_type",
-            "Tipo processo",
-            lambda record: record.process_type or "",
-            "Tutte",
-            24,
-        ),
-    ]
-
-    base_grouping_accessors: "OrderedDict[str, Callable[[OperationRecord], object]]" = (
-        OrderedDict()
-    )
-    base_grouping_labels: "OrderedDict[str, str]" = OrderedDict()
-
-    for identifier, label, accessor, default_label, width in base_filters:
-        base_grouping_accessors[identifier] = accessor
-        base_grouping_labels[identifier] = label
-        _create_filter_control(
-            identifier,
-            label,
-            accessor=accessor,
-            default_label=default_label,
-            width=width,
-            missing_label="Non specificato",
-        )
-
-    state.grouping_accessors = base_grouping_accessors
-    state.grouping_labels = base_grouping_labels
-
-    add_filter_button = ttk.Button(
-        filters_frame,
-        text="Aggiungi campo filtro…",
-        command=_prompt_add_filter,
-        style="Secondary.TButton",
-    )
-    add_filter_button.pack(side="left", padx=(4, 0))
-
-    filter_button = ttk.Button(
-        filters_frame,
-        text="Applica filtri",
-        command=_apply_filters,
-        style="Accent.TButton",
-    )
-    filter_button.pack(side="left", padx=(12, 0))
-
-    table_frame_parent: object
-    if hasattr(tk, "Frame"):
-        table_wrapper = tk.Frame(
-            main_frame,
-            background="#ffffff",
-            highlightbackground="#1976d2",
-            highlightcolor="#1976d2",
-            highlightthickness=1,
-            bd=0,
-        )
-        table_wrapper.pack(fill="both", expand=True, pady=(12, 0))
-        table_frame_parent = table_wrapper
-        table_frame = ttk.Frame(table_frame_parent, padding=16, style="Card.TFrame")
-        table_frame.pack(fill="both", expand=True)
-    else:
-        table_frame_parent = main_frame
-        table_frame = ttk.Frame(
-            table_frame_parent, padding=16, style="Card.TFrame"
-        )
-        table_frame.pack(fill="both", expand=True, pady=(12, 0))
-
-    tree = ttk.Treeview(
-        table_frame,
-        columns=tuple(state.visible_columns),
-        show="headings",
-        height=15,
-        style="Tech.Treeview",
-    )
-
-    vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
-    hsb = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
-    tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-
+    tree = ttk.Treeview(table_frame, show="headings")
     tree.pack(side="left", fill="both", expand=True)
-    vsb.pack(side="left", fill="y")
-    hsb.pack(side="bottom", fill="x")
 
-    if hasattr(tree, "tag_configure"):
-        tree.tag_configure("evenrow", background="#0d1628")
-        tree.tag_configure("oddrow", background="#101a30")
+    scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+    scrollbar.pack(side="right", fill="y")
+    tree.configure(yscrollcommand=scrollbar.set)
 
-    _configure_tree_columns()
+    tree.tag_configure("evenrow", background="#ffffff")
+    tree.tag_configure("oddrow", background="#f8fafc")
 
-    footer = ttk.Frame(main_frame, style="Dashboard.TFrame")
-    footer.pack(fill="x", pady=(12, 0))
-
-    ttk.Button(
-        footer,
-        text="Apri file Excel…",
-        command=_open_file,
-        style="Accent.TButton",
-    ).pack(side="left")
-    ttk.Button(
-        footer,
-        text="Mostra KPI",
-        command=_show_kpi_dialog,
-        style="Secondary.TButton",
-    ).pack(side="left", padx=8)
-    ttk.Button(
-        footer,
-        text="Grafico a torta",
-        command=_show_pie_chart,
-        style="Secondary.TButton",
-    ).pack(side="left", padx=8)
-    ttk.Label(footer, textvariable=status_var, style="Status.TLabel").pack(side="right")
+    # Status bar
+    status_bar = ttk.Frame(root, style="Dashboard.TFrame")
+    status_bar.pack(fill="x", padx=16, pady=(0, 12))
 
     ttk.Label(
-        main_frame,
-        text="Prodotto da Francesco Castaldi",
-        anchor="center",
-        style="Credits.TLabel",
-    ).pack(fill="x", pady=(8, 0))
+        status_bar,
+        textvariable=status_var,
+        style="Status.TLabel",
+    ).pack(side="left")
 
-    commands: dict[str, Callable[[], None]] = {
-        "open_file": _open_file,
-        "show_kpi": _show_kpi_dialog,
-        "show_chart": _show_pie_chart,
-        "apply_filters": _apply_filters,
-    }
+    ttk.Label(
+        status_bar,
+        text="TruMetraPla v1.0.0",
+        style="Credits.TLabel",
+    ).pack(side="right")
 
     if run_mainloop:
         root.mainloop()
-        return None
 
-    return WelcomeWindowHandles(root=root, state=state, commands=commands)
+    return WelcomeWindowHandles(
+        root=root,
+        state=state,
+        commands={
+            "open_file": _open_file,
+            "add_filter": _prompt_add_filter,
+            "configure_columns": _open_column_manager,
+            "show_kpi": _show_kpi_dialog,
+            "show_chart": _show_pie_chart,
+        },
+    )

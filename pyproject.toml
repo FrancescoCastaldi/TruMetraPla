@@ -3,35 +3,130 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trumetrapla"
-version = "0.1.0"
-description = "Strumenti per analizzare la produttività dei processi metalmeccanici da file Excel"
+name = "hello-gift-pub"
+description = "Industrial productivity analysis tool for Excel data with KPIs, interactive dashboard, and automated reports"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    {name = "TruMetraPla Contributors"}
+    {name = "Hello Gift Pub Contributors"}
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Manufacturing",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Spreadsheet",
+    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
     "pandas>=2.2",
     "openpyxl>=3.1",
     "click>=8.1",
-    "matplotlib>=3.8"
+    "matplotlib>=3.8",
+    "ttkbootstrap>=1.10",
 ]
-license = {file = "LICENSE"}
+dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
-    "pytest>=8.0"
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
 ]
 build = [
-    "pyinstaller>=6.10"
+    "pyinstaller>=6.10",
+]
+dev = [
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
 ]
 
 [project.scripts]
-trumetrapla = "trumetrapla.welcome_app:run"
+hello-gift-pub = "hello_gift_pub.welcome_app:run"
+hgp = "hello_gift_pub.welcome_app:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "hello_gift_pub.__version__"}
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+exclude = ["build", "dist", ".venv*"]
+select = ["E", "F", "I", "UP", "W", "C4", "C9", "T20", "PTH", "ERA", "SIM", "RET", "ARG", "PERF", "TRY", "TID", "QF", "DTZ", "LOG", "NPY", "PD", "PL", "RSE", "RUF", "TCH", "INT", "EXE", "ISC", "ICN", "PIE", "T10", "FLY", "ASYNC", "PD011", "PD012", "PD013", "PD014", "PD015"]
+ignore = ["E501", "TRY003", "ARG001", "ARG002"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_optional = true
+show_error_codes = true
+pretty = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers --strict-config"
+markers = [
+    "slow: marks tests as slow",
+    "gui: marks tests as requiring GUI",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["src/hello_gift_pub"]
+omit = ["tests/*", "*/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.pre-commit-config]
+repos = [
+    {repo = "https://github.com/astral-sh/ruff-pre-commit", rev = "v0.5.0", hooks = [
+        {id = "ruff", args = ["--fix", "--exit-non-zero-on-fix"]},
+        {id = "ruff-format"},
+    ]},
+    {repo = "https://github.com/pre-commit/mirrors-mypy", rev = "v1.10.0", hooks = [
+        {id = "mypy", additional_dependencies = ["types-requests"]},
+    ]},
+    {repo = "https://github.com/pre-commit/pre-commit-hooks", rev = "v4.6.0", hooks = [
+        {id = "trailing-whitespace"},
+        {id = "end-of-file-fixer"},
+        {id = "check-yaml"},
+        {id = "check-toml"},
+        {id = "check-added-large-files"},
+    ]},
+]

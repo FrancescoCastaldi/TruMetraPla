@@ -1,6 +1,6 @@
 # TruMetraPla
 
-> **Analisi produttività industriale** - Tool desktop e CLI per monitorare dati di produzione da Excel con KPI, dashboard interattiva e report automatizzati.
+> **Industrial productivity analysis** - Desktop and CLI tool to monitor production data from Excel with KPIs, an interactive dashboard, and automated reports.
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -8,147 +8,147 @@
 
 ---
 
-## Caratteristiche principali
+## Key features
 
-- **Import intelligente** - Riconoscimento automatico colonne Excel (italiano/inglese)
-- **Dashboard moderna** - Interfaccia grafica con tema tech minimal e filtri dinamici
-- **KPI real-time** - Pezzi prodotti, ore lavorate, produttività media per dipendente/processo
-- **Grafici interattivi** - Visualizzazioni a torta per analisi rapide
-- **Multi-piattaforma** - Eseguibile Windows + pacchetto Linux
-- **CLI completo** - Report da riga di comando con opzioni avanzate 
+- **Smart import** - Automatic recognition of Excel columns (Italian/English)
+- **Modern dashboard** - Graphical interface with a minimal tech theme and dynamic filters
+- **Real-time KPIs** - Pieces produced, hours worked, average productivity per employee/process
+- **Interactive charts** - Pie charts for quick analysis
+- **Cross-platform** - Windows executable + Linux package
+- **Full CLI** - Command-line reports with advanced options
 
 ---
 
-## Installazione
+## Installation
 
-### Requisiti
+### Requirements
 
-- Python 3.11 o superiore
-- pip (gestore pacchetti Python)
+- Python 3.11 or higher
+- pip (Python package manager)
 
-### Metodo 1: Installazione con pip (consigliato)
+### Method 1: Install with pip (recommended)
 
-Installa direttamente dal repository GitHub:
+Install directly from the GitHub repository:
 
 ```bash
 pip install git+https://github.com/FrancescoCastaldi/TruMetraPla.git
 ```
 
-### Metodo 2: Installazione da sorgente
+### Method 2: Install from source
 
-Clona il repository e installa in modalità sviluppo:
+Clone the repository and install in development mode:
 
 ```bash
-# Clona il repository
+# Clone the repository
 git clone https://github.com/FrancescoCastaldi/TruMetraPla.git
 cd TruMetraPla
 
-# Installa con dipendenze
+# Install with dependencies
 pip install -e .[test]
 ```
 
-### Metodo 3: Eseguibile precompilato
+### Method 3: Precompiled executable
 
 **Windows:**
-- Scarica `TruMetraPlaSetup.exe` o `TruMetraPla.exe` dalla sezione [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases)
-- Esegui l'installer o l'eseguibile portatile
-- Nessuna installazione Python necessaria
+- Download `TruMetraPla_Setup.exe` or `TruMetraPla.exe` from the [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases) section
+- Run the installer or the portable executable
+- No Python installation required
 
 **Linux:**
-- Scarica `trumetrapla-*.tar.gz` dalla sezione [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases)
-- Estrai ed esegui lo script di installazione:
+- Download `TruMetraPla-linux.tar.gz` from the [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases) section
+- Extract and run the installation script:
 
 ```bash
-tar xzf trumetrapla-*.tar.gz
-cd trumetrapla-*/
+tar xzf TruMetraPla-linux.tar.gz
+cd TruMetraPla-linux/
 sudo ./install.sh
 ```
 
-### Verifica installazione
+### Verify the installation
 
-Dopo l'installazione, verifica che tutto funzioni:
+After installation, verify everything works:
 
 ```bash
-# Mostra versione e aiuto
+# Show version and help
 trumetrapla --help
 
-# Avvia la dashboard
+# Launch the dashboard
 trumetrapla
 ```
 
 ## Quick start
 
-### Installazione
+### Installation
 
 ```bash
 pip install -e .[test]
 ```
 
-### Utilizzo base
+### Basic usage
 
 ```bash
-# Apri la dashboard interattiva
+# Open the interactive dashboard
 trumetrapla
 
-# Genera report da CLI
-trumetrapla report produzione.xlsx
+# Generate a report from the CLI
+trumetrapla report production.xlsx
 
-# Crea pacchetto Linux
+# Create the Linux package
 trumetrapla build-linux
 ```
 
 ---
 
-## Dashboard desktop
+## Desktop dashboard
 
-La GUI offre un'esperienza completa per l'analisi dei dati:
+The GUI offers a complete experience for data analysis:
 
-- **Caricamento file** - Drag & drop o menu File → Apri
-- **Filtri dinamici** - Filtra per operatore, processo, macchina
-- **Tabella interattiva** - Visualizza tutti i KPI con colonne ordinabili
-- **Grafici** - Report a torta basati su processo/operatore
-- **Export** - Salva dati filtrati in CSV
+- **File loading** - Drag & drop or File → Open menu
+- **Dynamic filters** - Filter by operator, process, machine
+- **Interactive table** - View all KPIs with sortable columns
+- **Charts** - Pie reports based on process/operator
+- **Export** - Save filtered data to CSV
 
-### Avvio dashboard
+### Launch the dashboard
 
-**Da codice:**
+**From source:**
 
 ```bash
 trumetrapla
 ```
 
-**Da eseguibile Windows:**
+**From the Windows executable:**
 
-- Doppio click su `dist/TruMetraPla.exe`
-- Oppure installa con l'installer automatico
+- Double-click `dist/TruMetraPla.exe`
+- Or install with the automatic installer
 
 ---
 
-## Build & distribuzione
+## Build & distribution
 
-### Eseguibile Windows (.exe)
+### Windows executable (.exe)
 
 ```bash
-# Genera con PyInstaller
-pyinstaller TruMetraPla.spec
+# Generate with PyInstaller
+trumetrapla build-exe
 
-# Eseguibile disponibile in dist/
+# Executable available in dist/
 ```
 
-### Pacchetto Linux (.tar.gz)
+### Linux package (.tar.gz)
 
 ```bash
-# Build automatico
+# Automatic build
 trumetrapla build-linux
 
-# Output: dist/trumetrapla-*.tar.gz
+# Output: dist/TruMetraPla-linux.tar.gz
 ```
 
-**Installazione su Linux:**
+**Installation on Linux:**
 
 ```bash
-tar xzf trumetrapla-*.tar.gz
-cd trumetrapla-*/
+tar xzf TruMetraPla-linux.tar.gz
+cd TruMetraPla-linux/
 ./install.sh
 ```
 
@@ -156,78 +156,76 @@ cd trumetrapla-*/
 
 ## CLI
 
-### Report completo
+### Full report
 
 ```bash
-trumetrapla report produzione.xlsx
+trumetrapla report production.xlsx
 ```
 
-### Opzioni avanzate
+### Advanced options
 
 ```bash
-# Filtra per operatore
-trumetrapla report produzione.xlsx --operatore "Mario Rossi"
+# Map a canonical field to a specific column
+trumetrapla report production.xlsx --column employee "Team member"
 
-# Filtra per processo
-trumetrapla report produzione.xlsx --processo "Assemblaggio"
+# Add a custom alias for automatic column recognition
+trumetrapla report production.xlsx --alias process "Stage"
 
-# Esporta in JSON
-trumetrapla report produzione.xlsx --format json > output.json
-
-# Salva su file
-trumetrapla report produzione.xlsx > report.txt
+# Analyze a specific sheet
+trumetrapla report production.xlsx --sheet "January"
 ```
 
 ---
 
-## Uso come libreria
+## Use as a library
 
 ```python
-from trumetrapla import load_data, calculate_metrics
+from trumetrapla.data_loader import load_operations_from_excel
+from trumetrapla.metrics import summarize_operations
 
-# Carica dati
-operations = load_data("produzione.xlsx")
+# Load data
+operations = load_operations_from_excel("production.xlsx")
 
-# Calcola KPI
-metrics = calculate_metrics(operations)
+# Calculate KPIs
+summary = summarize_operations(operations)
 
-print(f"Pezzi totali: {metrics.total_pieces}")
-print(f"Ore lavorate: {metrics.total_hours}")
-print(f"Produttività media: {metrics.avg_productivity:.2f} pz/h")
+print(f"Total pieces: {summary.total_quantity}")
+print(f"Hours worked: {summary.total_hours}")
+print(f"Average productivity: {summary.throughput:.2f} pieces/hour")
 ```
 
 ---
 
-## Requisiti di sistema
+## System requirements
 
 - **Python:** 3.11+
-- **Dipendenze:** pandas, openpyxl, tkinter, ttkbootstrap
-- **Sistema operativo:** Windows 10+, Linux (Ubuntu 20.04+, Debian 11+)
-- **RAM consigliata:** 2 GB minimo, 4 GB per file Excel di grandi dimensioni
-- **Risoluzione schermo:** Minimo 1280x720 per una visualizzazione ottimale della dashboard
+- **Dependencies:** pandas, openpyxl, tkinter, ttkbootstrap
+- **Operating system:** Windows 10+, Linux (Ubuntu 20.04+, Debian 11+)
+- **Recommended RAM:** 2 GB minimum, 4 GB for large Excel files
+- **Screen resolution:** Minimum 1280x720 for optimal dashboard viewing
 
 ---
 
-## Mappatura colonne
+## Column mapping
 
-TruMetraPla riconosce automaticamente le seguenti colonne Excel:
+TruMetraPla automatically recognizes the following Excel columns:
 
-| Italiano | English | Tipo |
-|----------|---------|------|
-| Data / Giorno | Date / Day | Data |
-| Operatore / Dipendente | Operator / Employee | Testo |
-| Processo / Reparto | Process / Department | Testo |
-| Macchina / Attrezzatura | Machine / Equipment | Testo |
-| Pezzi / Quantità | Pieces / Quantity | Numero |
-| Ore / Tempo | Hours / Time | Numero |
+| Italian | English | Type |
+|---------|---------|------|
+| Data / Giorno | Date / Day | Date |
+| Operatore / Dipendente | Operator / Employee | Text |
+| Processo / Reparto | Process / Department | Text |
+| Macchina / Attrezzatura | Machine / Equipment | Text |
+| Pezzi / Quantità | Pieces / Quantity | Number |
+| Ore / Tempo | Hours / Time | Number |
 
-**Nota:** Il sistema supporta colonne extra non mappate (vengono conservate nei dati ma non utilizzate per i KPI).
+**Note:** The system supports unmapped extra columns (they are preserved in the data but not used for KPIs).
 
 ---
 
-## Sviluppo
+## Development
 
-### Setup ambiente
+### Environment setup
 
 ```bash
 git clone https://github.com/FrancescoCastaldi/TruMetraPla.git
@@ -235,109 +233,106 @@ cd TruMetraPla
 pip install -e .[test]
 ```
 
-### Test
+### Tests
 
 ```bash
 pytest tests/
 ```
 
-### Struttura progetto
+### Project structure
 
 ```
 TruMetraPla/
 ├── src/trumetrapla/
-│   ├── __main__.py      # Entry point CLI
-│   ├── data_loader.py   # Import Excel
-│   ├── gui.py           # Dashboard Tkinter
-│   ├── metrics.py       # Calcolo KPI
-│   └── models.py        # Data models
+│   ├── __main__.py      # CLI entry point
+│   ├── cli.py           # Command-line interface
+│   ├── data_loader.py   # Excel import
+│   ├── gui.py           # Tkinter dashboard
+│   ├── metrics.py       # KPI calculation
+│   ├── models.py        # Data models
+│   ├── packaging.py     # Build & distribution
+│   └── welcome_app.py   # Graphical entry point
 ├── tests/               # Test suite
-└── docs/                # Documentazione
+└── docs/                # Documentation
 ```
 
 ---
 
-## Installazione Windows
+## Windows installation
 
-### Opzione 1: Installer automatico
+### Option 1: Automatic installer
 
-1. Scarica `TruMetraPlaSetup.exe` dalla sezione [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases)
-2. Esegui l'installer e segui le istruzioni
-3. Avvia TruMetraPla dal menu Start
+1. Download `TruMetraPla_Setup.exe` from the [Releases](https://github.com/FrancescoCastaldi/TruMetraPla/releases) section
+2. Run the installer and follow the instructions
+3. Launch TruMetraPla from the Start menu
 
-### Opzione 2: Eseguibile portatile
+### Option 2: Portable executable
 
-1. Scarica `TruMetraPla.exe` standalone
-2. Esegui direttamente (nessuna installazione necessaria)
+1. Download the standalone `TruMetraPla.exe`
+2. Run it directly (no installation required)
 
 ---
 
-## Installazione Linux
+## Linux installation
 
 ### Ubuntu/Debian
 
 ```bash
-wget https://github.com/FrancescoCastaldi/TruMetraPla/releases/latest/download/trumetrapla-latest.tar.gz
-tar xzf trumetrapla-latest.tar.gz
-cd trumetrapla-*/
+wget https://github.com/FrancescoCastaldi/TruMetraPla/releases/latest/download/TruMetraPla-linux.tar.gz
+tar xzf TruMetraPla-linux.tar.gz
+cd TruMetraPla-linux/
 sudo ./install.sh
-```
-
-### Arch/Manjaro
-
-```bash
-# Installa da AUR (quando disponibile)
-yay -S trumetrapla
 ```
 
 ---
 
 ## FAQ
 
-**Q: Come esporto i dati filtrati?**
+**Q: How do I export the filtered data?**
 
-A: Nella dashboard grafica, applica i filtri desiderati e clicca su "Esporta CSV".
+A: In the graphical dashboard, apply the desired filters and click "Export CSV".
 
-**Q: Dove vengono salvati i report?**
+**Q: Where are the reports saved?**
 
-A: I report CLI vengono stampati a schermo. Usa `> output.txt` per salvarli su file.
+A: CLI reports are printed to the screen. Use `> output.txt` to save them to a file.
 
-**Q: Il file Excel ha colonne in inglese, funziona?**
+**Q: My Excel file has English columns, will it work?**
 
-A: Sì, il sistema riconosce automaticamente sia nomi italiani che inglesi.
+A: Yes, the system automatically recognizes both Italian and English names.
 
-**Q: Posso usare il programma senza installare Python?**
+**Q: Can I use the program without installing Python?**
 
-A: Sì, usa l'eseguibile Windows (.exe) o il pacchetto Linux precompilato.
+A: Yes, use the Windows executable (.exe) or the precompiled Linux package.
 
 ---
 
-## Link utili
+## Useful links
 
-- [Documentazione completa](docs/)
+- [Full documentation](docs/)
 - [Issue tracker](https://github.com/FrancescoCastaldi/TruMetraPla/issues)
 - [Wiki](https://github.com/FrancescoCastaldi/TruMetraPla/wiki)
 
 ---
 
-## Licenza
+## License
 
-MIT License - Vedi [LICENSE](LICENSE) per dettagli.
+MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-## Novità recenti
+## Recent changes
 
-### v2.0 (Work in Progress)
+### v1.0.0
 
-- Nuovo tema UI "Tech Minimal" - Design pulito e professionale
-- Grafici a barre interattivi
-- Export CSV integrato
-- Supporto colonne Excel arbitrarie
-- Performance migliorate nel caricamento dati
+- Full English translation of the interface and codebase
+- New "Tech Minimal" UI theme - clean and professional design
+- Interactive charts
+- Integrated CSV export
+- Support for arbitrary Excel columns
+- Improved data loading performance
 
 ---
 
 <p align="center">
-  <i>Sviluppato con Python per l'analisi della produttività industriale</i>
+  <i>Built with Python for industrial productivity analysis</i>
 </p>

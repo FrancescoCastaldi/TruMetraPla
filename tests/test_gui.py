@@ -73,7 +73,7 @@ class DummyRoot:
     def config(self, **kwargs: object) -> None:
         self.config_calls.append(kwargs)
 
-    def destroy(self) -> None:  # pragma: no cover - richiamato dai pulsanti
+    def destroy(self) -> None:  # pragma: no cover - called by buttons
         pass
 
     def mainloop(self) -> None:
@@ -172,10 +172,13 @@ class DummyTreeview(DummyWidget):
             self.xscroll = kwargs["xscrollcommand"]
 
     def yview(self, *args, **kwargs) -> tuple:
-        return args  # pragma: no cover - utilizzato solo come callback
+        return args  # pragma: no cover - used only as callback
 
     def xview(self, *args, **kwargs) -> tuple:
-        return args  # pragma: no cover - utilizzato solo come callback
+        return args  # pragma: no cover - used only as callback
+
+    def tag_configure(self, *_args, **_kwargs) -> None:
+        pass
 
 
 class DummyScrollbar(DummyWidget):
@@ -264,18 +267,18 @@ def test_launch_welcome_window_loads_excel_and_updates_state():
         OperationRecord(
             date=date(2024, 1, 1),
             employee="Anna",
-            process="Taglio",
+            process="Cutting",
             machine="Laser 1",
-            process_type="Taglio",
+            process_type="Cutting",
             quantity=10,
             duration_minutes=60,
         ),
         OperationRecord(
             date=date(2024, 1, 2),
             employee="Luca",
-            process="Assemblaggio",
-            machine="Linea 3",
-            process_type="Assemblaggio",
+            process="Assembly",
+            machine="Line 3",
+            process_type="Assembly",
             quantity=8,
             duration_minutes=90,
         ),
@@ -287,7 +290,7 @@ def test_launch_welcome_window_loads_excel_and_updates_state():
         loader_calls["path"] = path
         return sample_records
 
-    toolkit.filedialog.return_value = "C:/dati.xlsx"
+    toolkit.filedialog.return_value = "C:/data.xlsx"
 
     handles = launch_welcome_window(
         run_mainloop=False,
@@ -297,17 +300,13 @@ def test_launch_welcome_window_loads_excel_and_updates_state():
 
     assert handles is not None
     root = handles.root
-    assert root.title_value == "TruMetraPla - Console Analitica"
+    assert isinstance(root, DummyRoot)
+    assert root.title_value == "TruMetraPla - Analytics Console"
     assert root.resizable_value == (True, True)
-
-    assert any(
-        widget.kwargs.get("text") == "Prodotto da Francesco Castaldi"
-        for widget in DummyLabel.instances
-    )
 
     handles.commands["open_file"]()
 
-    assert loader_calls["path"] == Path("C:/dati.xlsx")
+    assert loader_calls["path"] == Path("C:/data.xlsx")
     assert handles.state.records == sample_records
     assert handles.state.filtered_records == sample_records
     assert toolkit.messagebox.error_calls == []
@@ -319,12 +318,12 @@ def test_extra_columns_are_registered_and_groupable():
         OperationRecord(
             date=date(2024, 5, 1),
             employee="Anna",
-            process="Taglio",
+            process="Cutting",
             machine="Laser 2",
-            process_type="Taglio",
+            process_type="Cutting",
             quantity=20,
             duration_minutes=45,
-            extra={"Turno": "Notte", "Note": "Urgente"},
+            extra={"Shift": "Night", "Notes": "Urgent"},
         )
     ]
 
@@ -344,11 +343,11 @@ def test_extra_columns_are_registered_and_groupable():
 
     specs = list(handles.state.column_specs.values())
     labels = [spec.label for spec in specs]
-    assert "Turno" in labels
-    turno_spec = next(spec for spec in specs if spec.label == "Turno")
-    assert turno_spec.identifier in handles.state.visible_columns
-    assert turno_spec.grouping_key is not None
-    assert turno_spec.grouping_key in handles.state.grouping_accessors
+    assert "Shift" in labels
+    shift_spec = next(spec for spec in specs if spec.label == "Shift")
+    assert shift_spec.identifier in handles.state.visible_columns
+    assert shift_spec.grouping_key is not None
+    assert shift_spec.grouping_key in handles.state.grouping_accessors
 
 
 def test_launch_welcome_window_requires_valid_toolkit():

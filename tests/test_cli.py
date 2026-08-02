@@ -8,18 +8,18 @@ def test_cli_outputs_summary(tmp_path):
     frame = pd.DataFrame(
         [
             {
-                "Data": "2024-03-01",
-                "Dipendente": "Mario",
-                "Processo": "Taglio",
-                "Quantità": 100,
-                "Durata (min)": 120,
+                "Date": "2024-03-01",
+                "Employee": "Mario",
+                "Process": "Cutting",
+                "Quantity": 100,
+                "Duration (min)": 120,
             },
             {
-                "Data": "2024-03-02",
-                "Dipendente": "Anna",
-                "Processo": "Saldatura",
-                "Quantità": 150,
-                "Durata (min)": 180,
+                "Date": "2024-03-02",
+                "Employee": "Anna",
+                "Process": "Welding",
+                "Quantity": 150,
+                "Duration (min)": 180,
             },
         ]
     )
@@ -30,9 +30,9 @@ def test_cli_outputs_summary(tmp_path):
     result = runner.invoke(main, ["report", str(excel_path)])
 
     assert result.exit_code == 0
-    assert "Totale pezzi: 250" in result.output
-    assert "Performance per dipendente" in result.output
-    assert "Andamento giornaliero" in result.output
+    assert "Total pieces: 250" in result.output
+    assert "Performance by employee" in result.output
+    assert "Daily trend" in result.output
 
 
 def test_welcome_screen_is_printed():
@@ -41,10 +41,10 @@ def test_welcome_screen_is_printed():
 
     assert result.exit_code == 0
     assert "TruMetraPla Suite" in result.output
-    assert "Genera l'eseguibile standalone TruMetraPla.exe" in result.output
-    assert "Crea l'installer automatico TruMetraPla_Setup.exe" in result.output
-    assert "Script PowerShell/BAT e guida avanzata" in result.output
-    assert "Prepara il pacchetto Linux (Xubuntu)" in result.output
+    assert "Generate the standalone TruMetraPla.exe" in result.output
+    assert "Create the automatic TruMetraPla_Setup.exe installer" in result.output
+    assert "PowerShell/BAT scripts and advanced guide" in result.output
+    assert "Prepare the Linux package (Xubuntu)" in result.output
 
 
 def test_build_exe_command(monkeypatch, tmp_path):
@@ -61,15 +61,15 @@ def test_build_exe_command(monkeypatch, tmp_path):
     result = runner.invoke(main, ["build-exe", "--dist", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert f"Eseguibile generato in: {expected_path}" in result.output
+    assert f"Executable generated in: {expected_path}" in result.output
 
 
 def test_build_installer_command(monkeypatch, tmp_path):
-    expected_path = tmp_path / "TruMetraPla_Setup_0.1.0.exe"
+    expected_path = tmp_path / "TruMetraPla_Setup_1.0.0.exe"
 
     def fake_builder(dist_path, version, reuse_executable):
         assert dist_path == tmp_path
-        assert version == "0.1.0"
+        assert version == "1.0.0"
         assert reuse_executable is True
         return expected_path
 
@@ -81,7 +81,7 @@ def test_build_installer_command(monkeypatch, tmp_path):
     result = runner.invoke(main, ["build-installer", "--dist", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert f"Installer generato in: {expected_path}" in result.output
+    assert f"Installer generated in: {expected_path}" in result.output
 
 
 def test_build_linux_command(monkeypatch, tmp_path):
@@ -97,4 +97,4 @@ def test_build_linux_command(monkeypatch, tmp_path):
     result = runner.invoke(main, ["build-linux", "--dist", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert f"Bundle Linux generato in: {expected_path}" in result.output
+    assert f"Linux bundle generated in: {expected_path}" in result.output

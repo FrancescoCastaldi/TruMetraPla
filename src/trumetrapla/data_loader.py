@@ -1,4 +1,4 @@
-"""Funzioni per importare dati di produzione da file Excel."""
+"""Functions for importing production data from Excel files."""
 
 from __future__ import annotations
 
@@ -21,66 +21,60 @@ OPTIONAL_FIELDS = ("machine", "process_type")
 _CANONICAL_FIELDS = REQUIRED_FIELDS + OPTIONAL_FIELDS
 
 _DEFAULT_COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
-    "date": ("data", "date", "giorno"),
-    "employee": ("dipendente", "operatore", "employee"),
-    "process": ("processo", "fase", "linea", "process"),
+    "date": ("date", "day", "production date", "work date"),
+    "employee": ("employee", "operator", "worker", "staff", "team member"),
+    "process": ("process", "stage", "line", "operation", "activity"),
     "quantity": (
-        "quantità",
-        "pezzi",
-        "pezzi prodotti",
         "quantity",
         "pieces",
+        "pieces produced",
+        "output",
+        "qty",
     ),
-    "duration_minutes": ("durata (min)", "durata", "minuti", "duration", "minutes"),
+    "duration_minutes": ("duration (min)", "duration", "minutes", "time", "cycle time"),
 }
 
 _FIELD_KEYWORDS: dict[str, tuple[str, ...]] = {
-    "date": ("data", "date", "giorno"),
+    "date": ("date", "day", "production", "work"),
     "employee": (
-        "operatore",
-        "dipendente",
-        "addetto",
-        "responsabile",
-        "worker",
+        "operator",
         "employee",
+        "worker",
+        "staff",
         "team member",
+        "personnel",
     ),
     "process": (
-        "processo",
-        "fase",
-        "linea",
-        "operazione",
-        "attività",
-        "attivita",
-        "activity",
         "process",
+        "stage",
+        "line",
+        "operation",
+        "activity",
+        "phase",
     ),
     "machine": (
-        "macchina",
-        "macchinario",
-        "impianto",
-        "postazione",
         "machine",
+        "plant",
+        "workstation",
         "equipment",
+        "station",
     ),
     "process_type": (
-        "tipo processo",
-        "tipologia",
-        "categoria",
-        "category",
         "process type",
-        "classe processo",
+        "type",
+        "category",
+        "class",
+        "family",
     ),
-    "quantity": ("quantita", "quantità", "pezzi", "pieces", "quantity", "output"),
-    "duration_minutes": ("durata", "min", "minuti", "minutes", "tempo"),
+    "quantity": ("quantity", "pieces", "output", "qty", "produced"),
+    "duration_minutes": ("duration", "minutes", "time", "cycle"),
 }
-
 
 _COLUMN_GUESSER = build_default_guesser()
 
 
 class ColumnMappingError(ValueError):
-    """Errore sollevato quando le colonne richieste non sono presenti."""
+    """Error raised when required columns cannot be determined."""
 
 
 def _coerce_text(value: object) -> str:
@@ -101,28 +95,30 @@ def load_operations_from_excel(
     column_mapping: Mapping[str, str] | None = None,
     aliases: Mapping[str, Sequence[str]] | None = None,
 ) -> list[OperationRecord]:
-    """Carica i dati di produzione da un file Excel.
+    """Load production data from an Excel file.
 
     Args:
-        path: Percorso del file Excel da leggere.
-        sheet_name: Nome o indice del foglio da analizzare.
-        column_mapping: Mappatura esplicita tra i campi canonici e le colonne del
-            file. Ad esempio ``{"quantity": "Pezzi prodotti"}``.
-        aliases: Alias aggiuntivi per il riconoscimento automatico delle colonne.
+        path: Path to the Excel file to read.
+        sheet_name: Name or index of the sheet to analyze.
+        column_mapping: Explicit mapping between canonical fields and file columns.
+            For example ``{"quantity": "Pieces Produced"}``.
+        aliases: Additional aliases for automatic column recognition.
 
     Returns:
-        Una lista di :class:`OperationRecord` ordinata come il file di origine.
+        A list of :class:`OperationRecord` ordered as in the source file.
 
     Raises:
-        ColumnMappingError: se non è possibile determinare tutte le colonne
-            richieste.
+        ColumnMappingError: if it is not possible to determine all required columns.
     """
 
     excel_path = Path(path)
     if not excel_path.exists():
-        raise FileNotFoundError(f"Il file {excel_path} non esiste")
+        raise FileNotFoundError(f"File {excel_path} does not exist")
 
     data_frame = pd.read_excel(excel_path, sheet_name=sheet_name)
+    if isinstance(data_frame, dict):
+        # Multiple sheets returned, use the first one
+        data_frame = next(iter(data_frame.values()))
     if data_frame.empty:
         return []
 
@@ -142,8 +138,8 @@ def load_operations_from_excel(
     if missing:
         missing_fields = ", ".join(missing)
         raise ColumnMappingError(
-            "Impossibile individuare tutte le colonne richieste. "
-            f"Campi mancanti: {missing_fields}."
+            "Unable to identify all required columns. "
+            f"Missing fields: {missing_fields}."
         )
 
     normalized = data_frame.rename(
@@ -156,8 +152,8 @@ def load_operations_from_excel(
 
     try:
         normalized["date"] = pd.to_datetime(normalized["date"], errors="raise").dt.date
-    except Exception as exc:  # pragma: no cover - pandas eccezioni specifiche
-        raise ColumnMappingError("Colonna 'date' non convertibile in data") from exc
+    except Exception as exc:  # pragma: no cover - pandas specific exceptions
+        raise ColumnMappingError("Column 'date' cannot be converted to date") from exc
 
     for numeric_field in ("quantity", "duration_minutes"):
         try:
@@ -166,7 +162,7 @@ def load_operations_from_excel(
             )
         except Exception as exc:  # pragma: no cover
             raise ColumnMappingError(
-                f"Colonna '{numeric_field}' non convertibile in valore numerico"
+                f"Column '{numeric_field}' cannot be converted to numeric value"
             ) from exc
 
     normalized["quantity"] = normalized["quantity"].round().astype(int)
@@ -208,13 +204,13 @@ def _resolve_column_name(
     column_mapping: Mapping[str, str] | None,
     aliases: Mapping[str, Sequence[str]] | None,
 ) -> str:
-    """Trova il nome della colonna da usare per un campo canonico."""
+    """Find the column name to use for a canonical field."""
 
     if column_mapping and field in column_mapping:
         candidate = column_mapping[field]
         if candidate not in available_columns:
             raise ColumnMappingError(
-                f"La colonna '{candidate}' per il campo '{field}' non esiste nel file"
+                f"Column '{candidate}' for field '{field}' does not exist in file"
             )
         return candidate
 
@@ -237,9 +233,9 @@ def _resolve_column_name(
 
     raise ColumnMappingError(
         (
-            "Impossibile individuare la colonna per il campo "
-            f"'{field}'. Specificare 'column_mapping' o rinominare le "
-            "intestazioni nel file Excel."
+            "Unable to identify column for field "
+            f"'{field}'. Specify 'column_mapping' or rename "
+            "headers in the Excel file."
         )
     )
 
@@ -255,16 +251,15 @@ def suggest_column_mapping(
     aliases: Mapping[str, Sequence[str]] | None = None,
     column_samples: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[dict[str, str], tuple[str, ...]]:
-    """Suggerisce la mappatura tra i campi canonici e le colonne disponibili.
+    """Suggest mapping between canonical fields and available columns.
 
     Args:
-        columns: Sequenza di intestazioni disponibili nel file Excel.
-        column_mapping: Mappatura esplicita già fornita dall'utente.
-        aliases: Alias aggiuntivi per il riconoscimento automatico.
+        columns: Sequence of headers available in the Excel file.
+        column_mapping: Explicit mapping already provided by user.
+        aliases: Additional aliases for automatic recognition.
 
     Returns:
-        Una tupla contenente il dizionario di colonne risolte e i campi non
-        assegnati.
+        A tuple containing the resolved column dictionary and unassigned fields.
     """
 
     available_columns = list(columns)

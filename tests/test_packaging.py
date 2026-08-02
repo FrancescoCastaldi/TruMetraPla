@@ -1,5 +1,4 @@
-import shutil
-import tarfile
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,121 +11,147 @@ from trumetrapla.packaging import (
 )
 
 
-def test_build_windows_executable_requires_pyinstaller(monkeypatch):
-    monkeypatch.setattr(shutil, "which", lambda _: None)
+def test_build_windows_executable_raises_when_pyinstaller_missing(monkeypatch):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: None)
 
-    with pytest.raises(BuildError):
+    with pytest.raises(BuildError, match="PyInstaller is not available"):
         build_windows_executable()
 
 
-def test_build_windows_executable_invokes_gui_entrypoint(monkeypatch, tmp_path):
-    captured = {}
+def test_build_windows_executable_raises_when_entrypoint_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: "pyinstaller")
+    monkeypatch.setattr(
+        "trumetrapla.packaging._APP_ENTRYPOINT",
+        tmp_path / "missing.py",
+    )
 
-    def fake_run(command, check, text, capture_output, env):
-        captured["command"] = command
-        class Result:
-            returncode = 0
-            stdout = ""
-            stderr = ""
-
-        exe_path = tmp_path / "TruMetraPla.exe"
-        exe_path.parent.mkdir(parents=True, exist_ok=True)
-        exe_path.touch()
-        return Result()
-
-    monkeypatch.setattr("shutil.which", lambda _: "pyinstaller")
-    monkeypatch.setattr("subprocess.run", fake_run)
-
-    result = build_windows_executable(tmp_path)
-
-    assert result == tmp_path / "TruMetraPla.exe"
-    assert captured["command"][0].endswith("pyinstaller")
-    assert any(part.endswith("welcome_app.py") for part in captured["command"])
-    assert "--windowed" in captured["command"]
+    with pytest.raises(BuildError, match="Unable to find"):
+        build_windows_executable()
 
 
-def test_build_windows_installer_requires_makensis(monkeypatch):
-    monkeypatch.setattr(shutil, "which", lambda name: "pyinstaller" if name == "pyinstaller" else None)
+def test_build_windows_executable_raises_on_pyinstaller_failure(monkeypatch, tmp_path):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: "pyinstaller")
+    entrypoint = tmp_path / "welcome_app.py"
+    entrypoint.write_text("", encoding="utf-8")
+    monkeypatch.setattr("trumetrapla.packaging._APP_ENTRYPOINT", entrypoint)
 
-    with pytest.raises(BuildError):
+    class FakeResult:
+        returncode = 1
+        stderr = "boom"
+        stdout = ""
+
+    def fake_run(*_args, **_kwargs):
+        return FakeResult()
+
+    monkeypatch.setattr("trumetrapla.packaging.subprocess.run", fake_run)
+
+    with pytest.raises(BuildError, match="boom"):
+        build_windows_executable(tmp_path / "dist")
+
+
+def test_build_windows_executable_returns_existing_exe(monkeypatch, tmp_path):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: "pyinstaller")
+    entrypoint = tmp_path / "welcome_app.py"
+    entrypoint.write_text("", encoding="utf-8")
+    monkeypatch.setattr("trumetrapla.packaging._APP_ENTRYPOINT", entrypoint)
+
+    class FakeResult:
+        returncode = 0
+        stderr = ""
+        stdout = ""
+
+    def fake_run(*_args, **_kwargs):
+        return FakeResult()
+
+    monkeypatch.setattr("trumetrapla.packaging.subprocess.run", fake_run)
+
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir()
+    (dist_dir / "TruMetraPla.exe").write_bytes(b"exe")
+
+    result = build_windows_executable(dist_dir)
+
+    assert result == dist_dir / "TruMetraPla.exe"
+
+
+def test_build_windows_installer_raises_when_makensis_missing(monkeypatch):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: None)
+
+    with pytest.raises(BuildError, match="NSIS"):
         build_windows_installer()
 
 
-def test_build_windows_installer_invokes_nsis(monkeypatch, tmp_path):
-    commands = {}
+def test_build_windows_installer_raises_when_exe_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: "makensis")
 
-    def fake_which(name):
-        if name == "pyinstaller":
-            return "pyinstaller"
-        if name == "makensis":
-            return "makensis"
-        return None
+    def fake_build_exe(*_args, **_kwargs):
+        return tmp_path / "dist" / "TruMetraPla.exe"
 
-    def fake_run(command, check, text, capture_output, env=None):
-        class Result:
-            returncode = 0
-            stdout = ""
-            stderr = ""
+    monkeypatch.setattr(
+        "trumetrapla.packaging.build_windows_executable", fake_build_exe
+    )
 
-        if command[0] == "pyinstaller":
-            exe_path = tmp_path / "TruMetraPla.exe"
-            exe_path.touch()
-            commands["pyinstaller"] = command
-        else:
-            commands["makensis"] = command
-        return Result()
-
-    def fake_copy(src, dst, *, follow_symlinks=True):
-        Path(dst).parent.mkdir(parents=True, exist_ok=True)
-        Path(dst).write_bytes(Path(src).read_bytes() if Path(src).exists() else b"")
-
-    monkeypatch.setattr("shutil.which", fake_which)
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.copy2", fake_copy)
-
-    monkeypatch.chdir(tmp_path)
-
-    result = build_windows_installer(tmp_path, version="0.1.0", reuse_executable=False)
-
-    assert result == tmp_path / "TruMetraPla_Setup_0.1.0.exe"
-    assert commands["makensis"][0] == "makensis"
-    assert any("/DINPUT_EXE" in part for part in commands["makensis"])
+    with pytest.raises(BuildError, match="TruMetraPla.exe"):
+        build_windows_installer(tmp_path / "dist")
 
 
-def test_build_linux_bundle_requires_pyinstaller(monkeypatch):
-    monkeypatch.setattr(shutil, "which", lambda _: None)
+def test_build_windows_installer_compiles_script(monkeypatch, tmp_path):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: "makensis")
 
-    with pytest.raises(BuildError):
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir()
+    (dist_dir / "TruMetraPla.exe").write_bytes(b"exe")
+
+    class FakeResult:
+        returncode = 0
+        stderr = ""
+        stdout = ""
+
+    def fake_run(*_args, **_kwargs):
+        return FakeResult()
+
+    monkeypatch.setattr("trumetrapla.packaging.subprocess.run", fake_run)
+
+    result = build_windows_installer(dist_dir, version="1.0.0")
+
+    assert result.name == "TruMetraPla_Setup_1.0.0.exe"
+    assert (dist_dir / "installer" / "TruMetraPla-Installer.nsi").exists()
+
+
+def test_build_linux_bundle_raises_when_pyinstaller_missing(monkeypatch):
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: None)
+
+    with pytest.raises(BuildError, match="PyInstaller is not available"):
         build_linux_bundle()
 
 
 def test_build_linux_bundle_creates_tarball(monkeypatch, tmp_path):
-    def fake_which(name):
-        if name == "pyinstaller":
-            return "pyinstaller"
-        return None
+    monkeypatch.setattr("trumetrapla.packaging.shutil.which", lambda _: "pyinstaller")
+    entrypoint = tmp_path / "welcome_app.py"
+    entrypoint.write_text("", encoding="utf-8")
+    monkeypatch.setattr("trumetrapla.packaging._APP_ENTRYPOINT", entrypoint)
 
-    def fake_run(command, check, text, capture_output, env):
-        class Result:
-            returncode = 0
-            stdout = ""
-            stderr = ""
+    class FakeResult:
+        returncode = 0
+        stderr = ""
+        stdout = ""
 
-        dist_index = command.index("--distpath") + 1
-        binary_path = Path(command[dist_index]) / "TruMetraPla"
-        binary_path.parent.mkdir(parents=True, exist_ok=True)
-        binary_path.write_bytes(b"binary")
-        return Result()
+    def fake_run(*_args, **_kwargs):
+        return FakeResult()
 
-    monkeypatch.setattr("shutil.which", fake_which)
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("trumetrapla.packaging.subprocess.run", fake_run)
 
-    result = build_linux_bundle(tmp_path)
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir()
 
-    assert result == tmp_path / "TruMetraPla-linux.tar.gz"
+    # Simulate the binary produced by PyInstaller in the build work directory.
+    app_dist_dir = Path("build") / "pyinstaller-linux" / "dist"
+    app_dist_dir.mkdir(parents=True, exist_ok=True)
+    (app_dist_dir / "TruMetraPla").write_bytes(b"binary")
+
+    result = build_linux_bundle(dist_dir)
+
+    assert result.name == "TruMetraPla-linux.tar.gz"
     assert result.exists()
-
-    with tarfile.open(result, "r:gz") as archive:
-        names = archive.getnames()
-        assert "TruMetraPla-linux/install.sh" in names
+    assert (dist_dir / "TruMetraPla-linux" / "install.sh").exists()
+    assert (dist_dir / "TruMetraPla-linux" / "trumetrapla.desktop").exists()

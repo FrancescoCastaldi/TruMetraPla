@@ -12,14 +12,14 @@ set "REPO_ROOT=%CD%"
 set "PYTHON_EXE="
 for %%I in (python.exe) do if not defined PYTHON_EXE set "PYTHON_EXE=%%~$PATH:I"
 if not defined PYTHON_EXE (
-    echo Errore: Python 3.11+ non trovato nel PATH.
-    echo Installa Python da https://www.python.org/downloads/windows/ e abilita ^"Add Python to PATH^".
+    echo Error: Python 3.11+ not found in PATH.
+    echo Install Python from https://www.python.org/downloads/windows/ and enable ^"Add Python to PATH^".
     goto :error
 )
 
-set "VENV_DIR=%REPO_ROOT%\.venv-trumetrapla-build"
+set "VENV_DIR=%REPO_ROOT%\.venv-TruMetraPla-build"
 if not exist "%VENV_DIR%" (
-    echo Creazione ambiente virtuale dedicato...
+    echo Creating a dedicated virtual environment...
     "%PYTHON_EXE%" -m venv "%VENV_DIR%"
     if errorlevel 1 goto :error
 )
@@ -27,11 +27,11 @@ if not exist "%VENV_DIR%" (
 set "VENV_PYTHON=%VENV_DIR%\Scripts\python.exe"
 set "VENV_PIP=%VENV_DIR%\Scripts\pip.exe"
 if not exist "%VENV_PYTHON%" (
-    echo Errore: impossibile trovare python.exe nell'ambiente virtuale.
+    echo Error: unable to find python.exe in the virtual environment.
     goto :error
 )
 
-echo Aggiornamento di pip e installazione delle dipendenze di build...
+echo Updating pip and installing the build dependencies...
 "%VENV_PYTHON%" -m pip install --upgrade pip
 if errorlevel 1 goto :error
 "%VENV_PIP%" install --upgrade ".[build]"
@@ -41,10 +41,10 @@ where makensis >nul 2>&1
 if errorlevel 1 (
     winget --version >nul 2>&1
     if not errorlevel 1 (
-        echo NSIS non rilevato: avvio installazione silenziosa tramite winget...
+        echo NSIS not detected: starting silent installation via winget...
         winget install --id NSIS.NSIS -e --source winget --silent
     ) else (
-        echo Avviso: NSIS non rilevato. Installalo manualmente se vuoi creare TruMetraPla_Setup.exe.
+        echo Warning: NSIS not detected. Install it manually if you want to create TruMetraPla_Setup.exe.
     )
 )
 
@@ -63,7 +63,7 @@ goto :parse_args
 
 :after_parse
 
-echo Generazione dell'eseguibile TruMetraPla.exe...
+echo Generating the TruMetraPla.exe executable...
 if defined BUILD_ARGS (
     "%VENV_PYTHON%" -m trumetrapla build-exe !BUILD_ARGS!
 ) else (
@@ -72,7 +72,7 @@ if defined BUILD_ARGS (
 if errorlevel 1 goto :error
 
 if %INCLUDE_INSTALLER%==1 (
-    echo Creazione dell'installer grafico TruMetraPla_Setup.exe...
+    echo Creating the graphical TruMetraPla_Setup.exe installer...
     if defined BUILD_ARGS (
         "%VENV_PYTHON%" -m trumetrapla build-installer !BUILD_ARGS!
     ) else (
@@ -82,24 +82,24 @@ if %INCLUDE_INSTALLER%==1 (
 )
 
 echo.
-echo Operazione completata. I pacchetti sono nella cartella dist\.
+echo Operation completed. The packages are in the dist\ folder.
 popd
 endlocal
 exit /b 0
 
 :show_help
-echo Setup-TruMetraPla.bat - prepara le dipendenze e genera l'eseguibile Windows
-
-echo Uso: Setup-TruMetraPla.bat [opzioni_pyinstaller] [--include-installer]
-echo    Qualsiasi parametro viene passato a ^"trumetrapla build-exe^".
-echo    Usa --include-installer per creare anche TruMetraPla_Setup.exe.
+echo Setup-TruMetraPla.bat - prepares the dependencies and generates the Windows executable
+echo.
+echo Usage: Setup-TruMetraPla.bat [pyinstaller_options] [--include-installer]
+echo    Any parameter is passed to ^"trumetrapla build-exe^.
+echo    Use --include-installer to also create TruMetraPla_Setup.exe.
 popd
 endlocal
 exit /b 0
 
 :error
 echo.
-echo Errore durante l'installazione o la build.
+echo Error during installation or build.
 popd
 endlocal
 exit /b 1

@@ -1,4 +1,4 @@
-"""Utility per creare i pacchetti distribuibili di TruMetraPla."""
+"""Utilities for creating distributable TruMetraPla packages."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ _NSIS_TEMPLATE = (
 
 
 class BuildError(RuntimeError):
-    """Errore sollevato quando la generazione dell'eseguibile fallisce."""
+    """Error raised when executable generation fails."""
 
 
 def build_windows_executable(
@@ -44,17 +44,17 @@ def build_windows_executable(
     onefile: bool = True,
     clean: bool = True,
 ) -> Path:
-    """Crea l'eseguibile Windows tramite PyInstaller e restituisce il percorso finale."""
+    """Create the Windows executable via PyInstaller and return the final path."""
 
     pyinstaller_exe = shutil.which("pyinstaller")
     if pyinstaller_exe is None:
         raise BuildError(
-            "PyInstaller non è disponibile. Installa i requisiti con `pip install .[build]`."
+            "PyInstaller is not available. Install requirements with `pip install .[build]`."
         )
 
     if not _APP_ENTRYPOINT.exists():
         raise BuildError(
-            "Impossibile trovare l'entrypoint grafico di TruMetraPla. Reinstalla il pacchetto."
+            "Unable to find the TruMetraPla graphical entrypoint. Reinstall the package."
         )
 
     dist_dir = Path(dist_path) if dist_path else Path("dist")
@@ -94,8 +94,8 @@ def build_windows_executable(
     )
 
     if result.returncode != 0:
-        message = result.stderr.strip() or result.stdout.strip() or "Errore sconosciuto"
-        raise BuildError(f"PyInstaller ha restituito un errore:\n{message}")
+        message = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+        raise BuildError(f"PyInstaller returned an error:\n{message}")
 
     candidates = [
         dist_dir / "TruMetraPla.exe",
@@ -108,8 +108,8 @@ def build_windows_executable(
         if candidate.exists():
             return candidate
 
-    # In caso non siano disponibili file da controllare (ad esempio in ambienti di test)
-    # restituiamo comunque il percorso atteso in modalità onefile.
+    # In case no files are available to check (e.g. in test environments)
+    # we still return the expected path in onefile mode.
     return candidates[0]
 
 
@@ -119,12 +119,12 @@ def build_windows_installer(
     version: str | None = None,
     reuse_executable: bool = True,
 ) -> Path:
-    """Compila l'installer grafico (.exe) utilizzando NSIS."""
+    """Compile the graphical installer (.exe) using NSIS."""
 
     makensis_exe = shutil.which("makensis")
     if makensis_exe is None:
         raise BuildError(
-            "NSIS (makensis) non è disponibile. Installa NSIS e assicurati che `makensis` sia nel PATH."
+            "NSIS (makensis) is not available. Install NSIS and ensure `makensis` is in PATH."
         )
 
     dist_dir = Path(dist_path) if dist_path else Path("dist")
@@ -141,7 +141,7 @@ def build_windows_installer(
 
     if not exe_path.exists():
         raise BuildError(
-            "Impossibile trovare l'eseguibile TruMetraPla.exe necessario per l'installer."
+            "Unable to find the TruMetraPla.exe executable required for the installer."
         )
 
     stage_dir = dist_dir / "installer"
@@ -172,8 +172,8 @@ def build_windows_installer(
     )
 
     if result.returncode != 0:
-        message = result.stderr.strip() or result.stdout.strip() or "Errore sconosciuto"
-        raise BuildError(f"NSIS ha restituito un errore:\n{message}")
+        message = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+        raise BuildError(f"NSIS returned an error:\n{message}")
 
     return output_path
 
@@ -183,17 +183,17 @@ def build_linux_bundle(
     *,
     clean: bool = True,
 ) -> Path:
-    """Genera un archivio installabile per distribuzioni Linux basate su Ubuntu."""
+    """Generate an installable archive for Ubuntu-based Linux distributions."""
 
     pyinstaller_exe = shutil.which("pyinstaller")
     if pyinstaller_exe is None:
         raise BuildError(
-            "PyInstaller non è disponibile. Installa i prerequisiti con `pip install .[build]`."
+            "PyInstaller is not available. Install prerequisites with `pip install .[build]`."
         )
 
     if not _APP_ENTRYPOINT.exists():
         raise BuildError(
-            "Impossibile trovare l'entrypoint grafico di TruMetraPla. Reinstalla il pacchetto."
+            "Unable to find the TruMetraPla graphical entrypoint. Reinstall the package."
         )
 
     dist_dir = Path(dist_path) if dist_path else Path("dist")
@@ -238,8 +238,8 @@ def build_linux_bundle(
     )
 
     if result.returncode != 0:
-        message = result.stderr.strip() or result.stdout.strip() or "Errore sconosciuto"
-        raise BuildError(f"PyInstaller ha restituito un errore:\n{message}")
+        message = result.stderr.strip() or result.stdout.strip() or "Unknown error"
+        raise BuildError(f"PyInstaller returned an error:\n{message}")
 
     candidates = [
         app_dist_dir / "TruMetraPla",
@@ -255,7 +255,7 @@ def build_linux_bundle(
 
     if binary_path is None:
         raise BuildError(
-            "Impossibile individuare il binario generato da PyInstaller per Linux."
+            "Unable to locate the binary generated by PyInstaller for Linux."
         )
 
     bundle_root = dist_dir / "TruMetraPla-linux"
@@ -281,7 +281,7 @@ def build_linux_bundle(
             SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
             SOURCE_BIN="${SCRIPT_DIR}/bin/trumetrapla"
 
-            echo "Installazione di TruMetraPla in ${PREFIX}..."
+            echo "Installing TruMetraPla in ${PREFIX}..."
             sudo mkdir -p "${PREFIX}/bin"
             sudo cp "${SOURCE_BIN}" "${PREFIX}/bin/trumetrapla"
             sudo chmod +x "${PREFIX}/bin/trumetrapla"
@@ -292,7 +292,7 @@ def build_linux_bundle(
                 sudo desktop-file-install --dir=/usr/share/applications "${DESKTOP_ENTRY}"
             fi
 
-            echo "Installazione completata. Avvia con 'trumetrapla'."
+            echo "Installation complete. Launch with 'trumetrapla'."
             """
         ).strip()
         + "\n"
@@ -306,7 +306,7 @@ def build_linux_bundle(
             [Desktop Entry]
             Type=Application
             Name=TruMetraPla
-            Comment=Analisi della produttività da file Excel
+            Comment=Productivity analysis from Excel files
             Exec=trumetrapla
             Terminal=false
             Categories=Office;Utility;
@@ -323,7 +323,9 @@ def build_linux_bundle(
 
 
 def _to_nsis_path(path: Path) -> str:
-    """Converte un percorso in formato compatibile con gli script NSIS."""
+    """Convert a path to a format compatible with NSIS scripts."""
 
     return str(path).replace("/", "\\")
 
+
+_APP_ENTRYPOINT = Path(__file__).resolve().parent / "welcome_app.py"

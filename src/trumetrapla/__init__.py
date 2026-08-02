@@ -1,4 +1,4 @@
-"""TruMetraPla - strumenti per analizzare le performance produttive."""
+"""TruMetraPla - tools for analyzing production performance."""
 
 from .data_loader import load_operations_from_excel
 from .metrics import (
@@ -28,4 +28,4 @@ __all__ = [
     "build_windows_installer",
 ]
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"

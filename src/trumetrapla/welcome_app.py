@@ -1,4 +1,4 @@
-"""Entrypoint grafico dell'applicazione TruMetraPla."""
+"""Graphical entrypoint for the TruMetraPla application."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ else:
 
 
 def run(argv: Sequence[str] | None = None) -> None:
-    """Avvia l'interfaccia grafica o, se richiesto, la CLI."""
+    """Launch the graphical interface or, if requested, the CLI."""
 
     args = list(sys.argv if argv is None else argv)
     raw_args = list(args[1:])
@@ -52,7 +52,7 @@ def _run_cli(arguments: Iterable[str]) -> None:
 
 
 def _strip_module_invocation_tokens(arguments: list[str]) -> list[str]:
-    """Rimuove i token ``-m`` e il relativo modulo dall'invocazione Python."""
+    """Remove ``-m`` tokens and the related module from the Python invocation."""
 
     cleaned: list[str] = []
     skip_next = False
@@ -65,9 +65,9 @@ def _strip_module_invocation_tokens(arguments: list[str]) -> list[str]:
             skip_next = True
             continue
 
-        # Gli stub ``py -m`` possono includere il percorso completo del modulo.
+        # ``py -m`` stubs may include the full module path.
         if not cleaned and token.replace("\\", "/").startswith("trumetrapla"):
-            # Ignoriamo il nome del modulo quando è la prima voce residua.
+            # Ignore the module name when it is the first residual entry.
             continue
 
         cleaned.append(token)

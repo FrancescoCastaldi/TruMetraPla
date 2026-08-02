@@ -1,8 +1,6 @@
 import pytest
 from datetime import date
 
-import pytest
-
 from trumetrapla.metrics import (
     daily_trend,
     group_by_attributes,
@@ -18,27 +16,27 @@ def _sample_records():
         OperationRecord(
             date=date(2024, 1, 1),
             employee="Mario",
-            process="Taglio",
+            process="Cutting",
             machine="Laser 1",
-            process_type="Taglio",
+            process_type="Cutting",
             quantity=120,
             duration_minutes=90,
         ),
         OperationRecord(
             date=date(2024, 1, 1),
             employee="Luigi",
-            process="Piegatura",
-            machine="Pressa 2",
-            process_type="Piegatura",
+            process="Bending",
+            machine="Press 2",
+            process_type="Bending",
             quantity=80,
             duration_minutes=120,
         ),
         OperationRecord(
             date=date(2024, 1, 2),
             employee="Mario",
-            process="Saldatura",
+            process="Welding",
             machine="Robot 4",
-            process_type="Saldatura",
+            process_type="Welding",
             quantity=60,
             duration_minutes=60,
         ),
@@ -66,10 +64,10 @@ def test_group_by_employee():
 def test_group_by_process():
     performances = group_by_process(_sample_records())
 
-    assert {item.entity for item in performances} == {"Taglio", "Piegatura", "Saldatura"}
-    taglio = next(item for item in performances if item.entity == "Taglio")
-    assert taglio.total_quantity == 120
-    assert taglio.total_hours == pytest.approx(1.5, rel=1e-3)
+    assert {item.entity for item in performances} == {"Cutting", "Bending", "Welding"}
+    cutting = next(item for item in performances if item.entity == "Cutting")
+    assert cutting.total_quantity == 120
+    assert cutting.total_hours == pytest.approx(1.5, rel=1e-3)
 
 
 def test_daily_trend():
@@ -84,9 +82,9 @@ def test_group_by_multiple_attributes():
     performances = group_by_attributes(
         _sample_records(),
         ("process", "machine"),
-        display_names={"process": "Processo", "machine": "Macchina"},
+        display_names={"process": "Process", "machine": "Machine"},
     )
 
-    assert performances[0].entity == "Processo: Taglio • Macchina: Laser 1"
+    assert performances[0].entity == "Process: Cutting • Machine: Laser 1"
     assert performances[0].total_quantity == 120
     assert all(" • " in item.entity for item in performances)

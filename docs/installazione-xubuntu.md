@@ -1,20 +1,20 @@
-# Installazione rapida di TruMetraPla su Xubuntu
+# Quick installation of TruMetraPla on Xubuntu
 
-Questa guida riassume i passaggi necessari per scaricare, generare e installare TruMetraPla su Xubuntu (o su altre distribuzioni basate su Ubuntu 22.04+).
+This guide summarizes the steps to download, build, and install TruMetraPla on Xubuntu (or other Ubuntu 22.04+ based distributions).
 
-## Procedura rapida
+## Quick procedure
 
-### Prerequisiti
+### Prerequisites
 
 ```bash
 sudo apt update
 sudo apt install -y python3-venv python3-full desktop-file-utils
 ```
 
-### Build del pacchetto Linux in ambiente isolato
+### Build the Linux package in an isolated environment
 
 ```bash
-cd ~/Scaricati/TruMetraPla-master
+cd ~/Downloads/TruMetraPla
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
@@ -22,36 +22,36 @@ pip install .[build]
 trumetrapla build-linux
 ```
 
-Al termine viene generato l'archivio `dist/TruMetraPla-linux.tar.gz`.
+At the end, the archive `dist/TruMetraPla-linux.tar.gz` is generated.
 
-### Installazione del pacchetto
+### Install the package
 
 ```bash
 cd dist
 tar -xf TruMetraPla-linux.tar.gz
 cd TruMetraPla-linux
-# opzionale: installazione in percorso personalizzato
+# optional: install to a custom path
 # PREFIX="$HOME/.local" BIN_DEST="$HOME/.local/bin" sudo -E ./install.sh
 sudo ./install.sh
 ```
 
-## Note utili
+## Useful notes
 
-- Per cambiare percorso senza modificare lo script:
+- To change the path without modifying the script:
 
   ```bash
   PREFIX="$HOME/.local" BIN_DEST="$HOME/.local/bin" ./install.sh
   ```
 
-- Usa `sudo -E` solo se servono permessi amministrativi nelle destinazioni scelte.
-- Se durante l'installazione delle dipendenze compare l'errore `externally-managed-environment`, assicurati di aver attivato l'ambiente virtuale prima di eseguire `pip install .[build]`.
+- Use `sudo -E` only if administrative permissions are needed for the chosen destinations.
+- If you encounter the `externally-managed-environment` error during dependency installation, make sure you have activated the virtual environment before running `pip install .[build]`.
 
-## Automazione Windows
+## Windows automation
 
-Per completezza, puoi utilizzare lo script batch incluso per generare rapidamente il pacchetto Windows:
+For completeness, you can use the included batch script to quickly generate the Windows package:
 
 ```bat
-installer\Build-TruMetraPla.bat --dist C:\Percorso\Output
+installer\Build-TruMetraPla.bat --dist C:\Output\Path
 ```
 
-Questo comando sfrutta l'infrastruttura di build già presente nel repository per creare gli artefatti destinati a Windows.
+This command leverages the build infrastructure already present in the repository to create artifacts destined for Windows.

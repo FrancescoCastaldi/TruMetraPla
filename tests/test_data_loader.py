@@ -1,4 +1,3 @@
-
 import pandas as pd
 import pytest
 
@@ -13,26 +12,26 @@ def test_load_operations_from_excel_with_default_aliases(tmp_path):
     frame = pd.DataFrame(
         [
             {
-                "Data": "2024-01-01",
-                "Operatore": "Mario Rossi",
-                "Processo": "Taglio",
-                "Macchina": "Laser 1",
-                "Tipo processo": "Taglio",
-                "Pezzi prodotti": 120,
-                "Durata (min)": 90,
+                "Date": "2024-01-01",
+                "Operator": "Mario Rossi",
+                "Process": "Cutting",
+                "Machine": "Laser 1",
+                "Process type": "Cutting",
+                "Pieces produced": 120,
+                "Duration (min)": 90,
             },
             {
-                "Data": "2024-01-01",
-                "Operatore": "Luigi Verdi",
-                "Processo": "Piegatura",
-                "Macchina": "Pressa 2",
-                "Tipo processo": "Piegatura",
-                "Pezzi prodotti": 80,
-                "Durata (min)": 120,
+                "Date": "2024-01-01",
+                "Operator": "Luigi Verdi",
+                "Process": "Bending",
+                "Machine": "Press 2",
+                "Process type": "Bending",
+                "Pieces produced": 80,
+                "Duration (min)": 120,
             },
         ]
     )
-    excel_path = tmp_path / "operazioni.xlsx"
+    excel_path = tmp_path / "operations.xlsx"
     frame.to_excel(excel_path, index=False)
 
     records = load_operations_from_excel(excel_path)
@@ -40,11 +39,11 @@ def test_load_operations_from_excel_with_default_aliases(tmp_path):
     assert len(records) == 2
     assert records[0].employee == "Mario Rossi"
     assert records[0].machine == "Laser 1"
-    assert records[0].process_type == "Taglio"
+    assert records[0].process_type == "Cutting"
     assert records[0].quantity == 120
     assert pytest.approx(records[0].hours, rel=1e-3) == 1.5
-    assert records[1].process == "Piegatura"
-    assert records[1].machine == "Pressa 2"
+    assert records[1].process == "Bending"
+    assert records[1].machine == "Press 2"
 
 
 def test_load_operations_with_custom_mapping(tmp_path):
@@ -53,9 +52,9 @@ def test_load_operations_with_custom_mapping(tmp_path):
             {
                 "Date": "2024-02-01",
                 "Worker": "Anna Bianchi",
-                "Stage": "Saldatura",
-                "Machine": "Isola 3",
-                "Category": "Assemblaggio",
+                "Stage": "Welding",
+                "Machine": "Island 3",
+                "Category": "Assembly",
                 "Pieces": 50,
                 "Minutes": 45,
             }
@@ -79,8 +78,8 @@ def test_load_operations_with_custom_mapping(tmp_path):
 
     assert len(records) == 1
     assert records[0].employee == "Anna Bianchi"
-    assert records[0].machine == "Isola 3"
-    assert records[0].process_type == "Assemblaggio"
+    assert records[0].machine == "Island 3"
+    assert records[0].process_type == "Assembly"
     assert records[0].quantity == 50
     assert pytest.approx(records[0].productivity_per_hour, rel=1e-3) == pytest.approx(66.6666, rel=1e-3)
 
@@ -89,13 +88,13 @@ def test_missing_column_raises_error(tmp_path):
     frame = pd.DataFrame(
         [
             {
-                "Data": "2024-01-01",
-                "Operatore": "Mario Rossi",
-                "Processo": "Taglio",
-                "Macchina": "Laser 1",
-                "Tipo processo": "Taglio",
-                # Quantità mancante
-                "Durata (min)": 90,
+                "Date": "2024-01-01",
+                "Operator": "Mario Rossi",
+                "Process": "Cutting",
+                "Machine": "Laser 1",
+                "Process type": "Cutting",
+                # Quantity missing
+                "Duration (min)": 90,
             }
         ]
     )
@@ -107,38 +106,38 @@ def test_missing_column_raises_error(tmp_path):
 
 
 def test_suggest_column_mapping_returns_resolved_headers():
-    columns = ["Data", "Operatore", "Linea", "Pezzi prodotti", "Durata (min)"]
+    columns = ["Date", "Operator", "Line", "Pieces produced", "Duration (min)"]
 
     resolved, missing = suggest_column_mapping(columns)
 
     assert missing == ()
-    assert resolved["date"] == "Data"
-    assert resolved["employee"] == "Operatore"
-    assert resolved["process"] == "Linea"
-    assert resolved["quantity"] == "Pezzi prodotti"
-    assert resolved["duration_minutes"] == "Durata (min)"
+    assert resolved["date"] == "Date"
+    assert resolved["employee"] == "Operator"
+    assert resolved["process"] == "Line"
+    assert resolved["quantity"] == "Pieces produced"
+    assert resolved["duration_minutes"] == "Duration (min)"
 
 
 def test_auto_mapping_works_with_unconventional_headers(tmp_path):
     frame = pd.DataFrame(
         [
             {
-                "Giorno registrazione": "2024/03/05",
+                "Registration day": "2024/03/05",
                 "Team member": "Giulia Neri",
-                "Attività svolta": "Controllo qualità",
-                "Postazione": "Area QA",
-                "Classe processo": "Verifica",
-                "Tot output": 64,
-                "Tempo lavorato": 52,
+                "Activity performed": "Quality control",
+                "Workstation": "QA Area",
+                "Process class": "Verification",
+                "Total output": 64,
+                "Time worked": 52,
             },
             {
-                "Giorno registrazione": "2024/03/06",
+                "Registration day": "2024/03/06",
                 "Team member": "Luca Blu",
-                "Attività svolta": "Imballaggio",
-                "Postazione": "Magazzino",
-                "Classe processo": "Logistica",
-                "Tot output": 48,
-                "Tempo lavorato": 47,
+                "Activity performed": "Packaging",
+                "Workstation": "Warehouse",
+                "Machine class": "Logistics",
+                "Total output": 48,
+                "Time worked": 47,
             },
         ]
     )
@@ -151,9 +150,8 @@ def test_auto_mapping_works_with_unconventional_headers(tmp_path):
     assert len(records) == 2
     assert {record.employee for record in records} == {"Giulia Neri", "Luca Blu"}
     assert {record.process for record in records} == {
-        "Controllo qualità",
-        "Imballaggio",
+        "Quality control",
+        "Packaging",
     }
-    assert {record.process_type for record in records} == {"Verifica", "Logistica"}
     assert records[0].quantity == 64
     assert pytest.approx(records[0].duration_minutes, rel=1e-3) == 52

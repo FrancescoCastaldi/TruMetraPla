@@ -1,92 +1,85 @@
-# Combinazioni CLI per l'estrazione dei dati
+# CLI combinations for data extraction
 
-TruMetraPla apre l'interfaccia grafica quando esegui `trumetrapla` senza argomenti.
-Le combinazioni riportate di seguito consentono invece di avviare le modalità a riga
-di comando per generare report testuali direttamente dal terminale.
+TruMetraPla opens the graphical interface when you run `trumetrapla` without arguments.
+The combinations below allow you to start the command-line modes to generate text reports directly from the terminal.
 
-## Avviare la CLI interattiva
+## Start the interactive CLI
 
 ```bash
 trumetrapla --cli
 ```
 
-Mostra il menu numerico con cui:
-- [1] Generi report Excel guidati
-- [2] Compili l'eseguibile Windows (`build-exe`)
-- [3] Crei l'installer NSIS (`build-installer`)
-- [4] Visualizzi gli script di automazione
-- [5] Riapri la GUI da linea di comando
+Shows the numbered menu to:
+- [1] Generate guided Excel reports
+- [2] Build the Windows executable (`build-exe`)
+- [3] Create the NSIS installer (`build-installer`)
+- [4] View automation scripts
+- [5] Reopen the GUI from the command line
 
-## Report base da file Excel
-
-```bash
-trumetrapla report "C:\\Percorso\\produzione.xlsx"
-```
-
-Legge il foglio predefinito (indice 0) e stampa il riepilogo di produttività
-nel terminale.
-
-## Specificare il foglio di lavoro
+## Basic report from an Excel file
 
 ```bash
-trumetrapla report produzione.xlsx --sheet "Linea 2"
-trumetrapla report produzione.xlsx --sheet 3
+trumetrapla report "C:\\Path\\production.xlsx"
 ```
 
-Accetta sia il nome sia l'indice numerico del foglio Excel.
+Reads the default sheet (index 0) and prints the productivity summary to the terminal.
 
-## Mappare manualmente le colonne
-
-Quando le intestazioni non seguono i nomi riconosciuti automaticamente puoi
-fornire le corrispondenze.
+## Specify the worksheet
 
 ```bash
-trumetrapla report produzione.xlsx \
-  --column date "Giorno" \
-  --column employee "Operatore" \
-  --column process "Reparto" \
-  --column machine "Isola" \
-  --column process_type "Categoria" \
-  --column quantity "Pezzi realizzati" \
-  --column duration_minutes "Tempo (min)"
+trumetrapla report production.xlsx --sheet "Line 2"
+trumetrapla report production.xlsx --sheet 3
 ```
 
-Ripeti `--column` per ogni campo canonico. I campi `machine` e `process_type`
-sono facoltativi ma puoi indicarli quando vuoi includerli nei report.
+Accepts either the name or the numeric index of the Excel sheet.
 
-## Aggiungere alias permanenti
+## Manually map columns
 
-Gli alias integrativi permettono al riconoscimento automatico di capire nuove
-intestazioni senza doverle rimappare ogni volta.
+When headers don't follow the automatically recognized names, you can provide the mappings.
 
 ```bash
-trumetrapla report produzione.xlsx \
-  --alias machine "Centro di lavoro" \
-  --alias process_type "Tipo ciclo"
+trumetrapla report production.xlsx \
+  --column date "Day" \
+  --column employee "Operator" \
+  --column process "Department" \
+  --column machine "Island" \
+  --column process_type "Category" \
+  --column quantity "Pieces produced" \
+  --column duration_minutes "Time (min)"
 ```
 
-Puoi combinare `--alias` con gli altri parametri (`--sheet`, `--column`).
+Repeat `--column` for each canonical field. The `machine` and `process_type` fields are optional but can be included when you want them in reports.
 
-## Eseguire la CLI senza menu interattivo
+## Add permanent aliases
+
+Additional aliases allow the automatic recognition to understand new headers without remapping every time.
+
+```bash
+trumetrapla report production.xlsx \
+  --alias machine "Work center" \
+  --alias process_type "Cycle type"
+```
+
+You can combine `--alias` with other parameters (`--sheet`, `--column`).
+
+## Run the CLI without the interactive menu
 
 ```bash
 trumetrapla --no-interactive
 ```
 
-Stampa le opzioni principali senza aspettare un input. È utile negli script
-quando vuoi ricordare rapidamente i comandi disponibili.
+Prints the main options without waiting for input. Useful in scripts when you want to quickly recall the available commands.
 
-## Altre utilità da terminale
+## Other terminal utilities
 
-*Generazione eseguibile*
+*Generate executable*
 ```bash
 trumetrapla build-exe --dist dist --onefile
 ```
 
-*Compilazione installer*
+*Compile installer*
 ```bash
 trumetrapla build-installer --dist dist --reuse-exe
 ```
 
-Questi comandi possono essere lanciati così come sono oppure tramite il menu
-interattivo (`trumetrapla --cli`).
+These commands can be run as-is or via the interactive menu (`trumetrapla --cli`).

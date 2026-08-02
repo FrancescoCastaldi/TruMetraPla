@@ -1,4 +1,4 @@
-"""Modelli di dominio per rappresentare le lavorazioni produttive."""
+"""TruMetraPla - Domain models for production operations."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Mapping
 
 @dataclass(frozen=True, slots=True)
 class OperationRecord:
-    """Rappresenta una singola lavorazione registrata nel sistema."""
+    """Represents a single production operation record."""
 
     date: date
     employee: str
@@ -22,21 +22,18 @@ class OperationRecord:
 
     @property
     def hours(self) -> float:
-        """Durata della lavorazione espressa in ore."""
-
+        """Duration of the operation expressed in hours."""
         return max(self.duration_minutes, 0.0) / 60.0
 
     @property
     def productivity_per_hour(self) -> float:
-        """Pezzi prodotti all'ora per la lavorazione."""
-
+        """Pieces produced per hour for this operation."""
         if self.duration_minutes <= 0:
             return 0.0
         return self.quantity / (self.duration_minutes / 60.0)
 
     def value_for(self, key: str) -> object:
-        """Ritorna il valore associato all'attributo o ai campi extra."""
-
+        """Return the value associated with the attribute or extra fields."""
         if hasattr(self, key):
             return getattr(self, key)
         return self.extra.get(key, "")

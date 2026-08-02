@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 #
-# Script per build e packaging di TruMetraPla su Linux (Ubuntu/Debian)
-# Installa dipendenze, crea virtual environment e genera pacchetto .tar.gz
+# Script to build and package TruMetraPla on Linux (Ubuntu/Debian)
+# Installs dependencies, creates a virtual environment and generates the .tar.gz package
 #
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,10 +11,10 @@ VENV_DIR="$ROOT_DIR/.venv"
 
 usage() {
     cat <<'USAGE'
-Uso: install-trumetrapla-xubuntu.sh [--dist DIR] [--skip-apt]
+Usage: install-TruMetraPla-xubuntu.sh [--dist DIR] [--skip-apt]
 
-  --dist DIR    Specifica la cartella di output per il pacchetto Linux (default: dist/)
-  --skip-apt    Non esegue "sudo apt update && sudo apt install ..." (dipendenze già presenti)
+  --dist DIR    Specify the output folder for the Linux package (default: dist/)
+  --skip-apt    Do not run "sudo apt update && sudo apt install ..." (dependencies already present)
 USAGE
 }
 
@@ -35,7 +35,7 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
-            echo "Opzione non riconosciuta: $1" >&2
+            echo "Unrecognized option: $1" >&2
             usage
             exit 1
             ;;
@@ -48,43 +48,43 @@ log() {
 
 if [[ $RUN_APT -eq 1 ]]; then
     if command -v apt >/dev/null 2>&1; then
-        log "Aggiornamento indici APT"
+        log "Updating APT indexes"
         sudo apt update
-        log "Installazione pacchetti di sistema"
+        log "Installing system packages"
         sudo apt install -y python3-venv python3-full desktop-file-utils python3-tk
     else
-        log "APT non disponibile su questo sistema: salto installazione pacchetti"
-        log "Installa manualmente python3-venv, python3-full e desktop-file-utils oppure usa --skip-apt"
+        log "APT not available on this system: skipping package installation"
+        log "Install python3-venv, python3-full and desktop-file-utils manually or use --skip-apt"
     fi
 else
-    log "Skip installazione pacchetti di sistema"
+    log "Skipping system package installation"
 fi
 
 if [[ ! -d "$VENV_DIR" ]]; then
-    log "Creazione ambiente virtuale in $VENV_DIR"
+    log "Creating virtual environment in $VENV_DIR"
     python3 -m venv "$VENV_DIR"
 fi
 
 # shellcheck disable=SC1090
 source "$VENV_DIR/bin/activate"
 
-log "Aggiornamento di pip"
+log "Updating pip"
 pip install --upgrade pip
 
-log "Installazione TruMetraPla in modalità build"
+log "Installing TruMetraPla in build mode"
 pip install "$ROOT_DIR"[build]
 
 mkdir -p "$DIST_DIR"
 
-log "Generazione pacchetto Linux"
+log "Generating the Linux package"
 trumetrapla build-linux --dist "$DIST_DIR"
 
 PACKAGE_PATH="$DIST_DIR/TruMetraPla-linux.tar.gz"
 
 if [[ -f "$PACKAGE_PATH" ]]; then
-    log "Pacchetto pronto: $PACKAGE_PATH"
-    log "Estrai e lancia ./install.sh con sudo o con variabili PREFIX/BIN_DEST personalizzate"
+    log "Package ready: $PACKAGE_PATH"
+    log "Extract and run ./install.sh with sudo or with custom PREFIX/BIN_DEST variables"
 else
-    echo "Errore: pacchetto non generato" >&2
+    echo "Error: package not generated" >&2
     exit 1
 fi
